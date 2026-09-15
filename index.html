@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> GN-MATH </title>
+    <style>
+        :root {
+            --bg-color: #0f0f12;
+            --card-color: #16161e;
+            --accent-color: #7aa2f7;
+            --text-color: #a9b1d6;
+            --text-bright: #c0caf5;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            max-width: 1200px;
+            margin: 40px auto 20px auto;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--text-bright);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .search-container {
+            margin: 20px auto;
+            max-width: 500px;
+        }
+
+        #searchBar {
+            width: 100%;
+            padding: 12px 20px;
+            background-color: var(--card-color);
+            border: 2px solid #2ac3de;
+            border-radius: 8px;
+            color: var(--text-bright);
+            font-size: 1rem;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        #searchBar:focus {
+            border-color: var(--accent-color);
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .tab-btn {
+            background-color: var(--card-color);
+            color: var(--text-color);
+            border: 1px solid #24283b;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active, .tab-btn:hover {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            font-weight: bold;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .game-card {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #24283b;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            border-color: var(--accent-color);
+        }
+
+        .game-thumbnail {
+            width: 100%;
+            height: 130px;
+            background-color: #24283b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+        }
+
+        .game-info {
+            padding: 15px;
+            text-align: center;
+        }
+
+        .game-title {
+            color: var(--text-bright);
+            font-weight: 600;
+            margin: 0 0 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .game-category {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #565f89;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>GN-Math</h1>
+        <p>Explore resources, tools, and interactive math features.</p>
+        
+        <div class="search-container">
+            <input type="text" id="searchBar" placeholder="Search items..." onkeyup="filterGames()">
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="filterCategory('all', this)">All</button>
+            <button class="tab-btn" onclick="filterCategory('math', this)">Math</button>
+            <button class="tab-btn" onclick="filterCategory('tools', this)">Tools</button>
+        </div>
+    </header>
+
+    <main class="game-grid" id="gameGrid">
+        
+        <!-- Game Item 1 -->
+        <a href="games/drive-mad/index.html" class="game-card" data-category="math">
+            <div class="game-thumbnail">🚗</div>
+            <div class="game-info">
+                <div class="game-title">Drive Mad</div>
+                <div class="game-category">Math</div>
+            </div>
+        </a>
+
+        <!-- Game Item 2 -->
+        <a href="games/calculators/index.html" class="game-card" data-category="tools">
+            <div class="game-thumbnail">🧮</div>
+            <div class="game-info">
+                <div class="game-title">Matrix Solver</div>
+                <div class="game-category">Tools</div>
+            </div>
+        </a>
+
+        <!-- Add more blocks down here using the exact same format -->
+
+    </main>
+
+    <script>
+        let currentCategory = 'all';
+
+        function filterGames() {
+            let input = document.getElementById('searchBar').value.toLowerCase();
+            let cards = document.getElementsByClassName('game-card');
+
+            for (let card of cards) {
+                let title = card.querySelector('.game-title').innerText.toLowerCase();
+                let category = card.getAttribute('data-category');
+                
+                let matchesSearch = title.includes(input);
+                let matchesCategory = (currentCategory === 'all' || category === currentCategory);
+
+                if (matchesSearch && matchesCategory) {
+                    card.style.display = "flex";
+                } else {
+                    card.style.display = "none";
+                }
+            }
+        }
+
+        function filterCategory(category, button) {
+            currentCategory = category;
+            
+            // Handle active tab button styles
+            let buttons = document.getElementsByClassName('tab-btn');
+            for(let btn of buttons) { btn.classList.remove('active'); }
+            button.classList.add('active');
+
+            filterGames(); // Re-run search matching logic with category constraint
+        }
+    </script>
+</body>
+</html>

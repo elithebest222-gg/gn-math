@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Plants vs. Zombies</title>
+  <title>Plants vs. Zombies - Direct Local</title>
   <style>
     body {
       margin: 0;
@@ -63,7 +63,6 @@
     let _res, _rej;
     window.moduleReadyPromise = new Promise((r, e) => { _res = r; _rej = e; });
 
-    // Emscripten configuration for the WebAssembly module
     var Module = {
       canvas: document.getElementById("canvas"),
       noInitialRun: true,
@@ -75,9 +74,8 @@
       },
       print: console.log,
       printErr: console.warn,
-      // Forces Emscripten to look for the .wasm file locally next to pvz.js
       locateFile: function(path, prefix) {
-        if (path.endsWith(".wasm")) return "./pvz.wasm";
+        if (path.endsWith(".wasm")) return "pvz.wasm";
         return prefix + path;
       }
     };
@@ -87,10 +85,11 @@
     const loadingText = document.querySelector("#loading-text");
     let loadedBytes = 0;
 
+    // Reads the chunks sequentially and monitors data throughput progress
     async function fetchWithProgress(url) {
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status} - Could not find: ${url}`);
+        throw new Error(`HTTP ${response.status} - Missing: ${url}`);
       }
       const reader = response.body.getReader();
       let chunks = [];
@@ -104,8 +103,7 @@
         chunks.push(value);
         
         let mbDone = (loadedBytes / (1024 * 1024)).toFixed(2);
-        let mbTotal = '43.34';
-        loadingText.textContent = `LOADING... ${mbDone} MB / ${mbTotal} MB`;
+        loadingText.textContent = `LOADING... ${mbDone} MB / 43.34 MB`;
       }
       
       let fullBuffer = new Uint8Array(received);
@@ -117,68 +115,42 @@
       return fullBuffer.buffer;
     }
 
-    async function mergeFiles(fileParts, cacheKey) {
+    (async () => {
       try {
-        const cache = await caches.open("pvz-cache");
-        const cachedResponse = await cache.match(cacheKey);
-        if (cachedResponse) {
-          const blob = await cachedResponse.blob();
-          return URL.createObjectURL(blob);
-        }
+        // 1. Stream file parts cleanly without matching browser Cache Storage overrides
+        loadingText.textContent = "LOADING... Fetching game files...";
+        const fileParts = ["main.pak.part1", "main.pak.part2", "main.pak.part3"];
+        
         const buffers = await Promise.all(
           fileParts.map(part => fetchWithProgress(part))
         );
-        const mergedBlob = new Blob(buffers);
-        const response = new Response(mergedBlob);
-        await cache.put(cacheKey, response);
-        return URL.createObjectURL(mergedBlob);
-      } catch (err) {
-        console.error("Error patching/merging pak splits:", err);
-        loadingText.textContent = "ERROR: Missing main.pak.part files locally";
-        throw err;
-      }
-    }
-
-    function getParts(file, start, end) {
-      let parts = [];
-      for (let i = start; i <= end; i++) {
-        // Look in the local folder explicitly using relative dots
-        parts.push("./" + file + ".part" + i);
-      }
-      return parts;
-    }
-
-    (async () => {
-      try {
-        // 1. Fetch local pack parts (main.pak.part1, etc.)
-        const [pakurl] = await Promise.all([
-          mergeFiles(getParts("main.pak", 1, 3), "main.pak"),
-        ]);
         
-        // 2. Load the main local javascript orchestration file
+        const mergedBlob = new Blob(buffers);
+        const pakurl = URL.createObjectURL(mergedBlob);
+        
+        // 2. Load script orchestrator
         let ns = document.createElement("script");
-        ns.src = "./pvz.js";
+        ns.src = "pvz.js";
         ns.onerror = () => {
-          loadingText.textContent = "ERROR: Could not load local 'pvz.js'";
+          loadingText.textContent = "ERROR: Cannot read 'pvz.js'";
         };
         document.body.appendChild(ns);
         await window.moduleReadyPromise;
 
-        // 3. Local asset file map mapping directly into the virtual Emscripten FileSystem
+        // 3. Virtual internal file system mapping arrays
         const files = [
           [pakurl, "main.pak"],
-          ["./properties/Layout.xml", "properties/Layout.xml"],
-          ["./properties/partner.xml.sig", "properties/partner.xml.sig"],
-          ["./properties/default.xml", "properties/default.xml"],
-          ["./properties/partner.xml", "properties/partner.xml"],
-          ["./properties/partner_logo.jpg", "properties/partner_logo.jpg"],
+          ["properties/Layout.xml", "properties/Layout.xml"],
+          ["properties/partner.xml.sig", "properties/partner.xml.sig"],
+          ["properties/default.xml", "properties/default.xml"],
+          ["properties/partner.xml", "properties/partner.xml"],
+          ["properties/partner_logo.jpg", "properties/partner_logo.jpg"],
         ];
 
         for (const [src, dest] of files) {
           const response = await fetch(src);
           if (!response.ok) {
-            console.error(`Asset failed to resolve: ${src}`);
-            loadingText.textContent = `CRITICAL ERROR: Missing local file "${src}"`;
+            loadingText.textContent = `ERROR: Missing file "properties/${dest.split('/').pop()}"`;
             return;
           }
           const data = new Uint8Array(await response.arrayBuffer());
@@ -191,12 +163,12 @@
           Module.FS.writeFile("/" + dest, data);
         }
 
-        // 4. Setup local IndexedDB storage mapping for save states
+        // 4. Mount saves systems
         try { Module.FS.mkdir("/saves"); } catch {}
         try { Module.FS.mount(Module.FS.filesystems.IDBFS, {}, "/saves"); } catch {}
         await new Promise(r => Module.FS.syncfs(true, r));
 
-        // 5. Canvas Auto-scaling Logic
+        // 5. Responsive scaling logic
         const c = document.getElementById("canvas");
         const resize = () => {
           const s = Math.min(innerWidth / 800, innerHeight / 600);
@@ -207,18 +179,18 @@
         addEventListener("resize", resize);
         addEventListener("fullscreenchange", resize);
 
-        // 6. Persistence Save Synchronization
         const sync = () => Module.FS.syncfs(false, () => {});
         setInterval(sync, 5000);
         addEventListener("visibilitychange", () => document.hidden && sync());
         addEventListener("pagehide", sync);
 
-        // 7. Run WebAssembly main lifecycle entrypoint
+        // 6. Start game engine execution loop
         Module.callMain([]);
         loadingText.remove();
         
       } catch (e) {
-        console.error("Execution halt error:", e);
+        console.error("Execution loop crash:", e);
+        loadingText.textContent = "ERROR: Local assets blocked or incomplete. Verify server connection.";
       }
     })();
   </script>

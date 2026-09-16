@@ -41,6 +41,26 @@
         animation: rainbow 3s ease infinite;
       }
 
+      /* Error log styling box at the top of the page */
+      #error-log-box {
+        position: fixed;
+        top: 10px;
+        left: 5%;
+        width: 90%;
+        max-height: 150px;
+        overflow-y: auto;
+        background: rgba(255, 0, 0, 0.9);
+        color: white;
+        font-family: monospace;
+        font-size: 14px;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: left;
+        z-index: 9999;
+        display: none;
+        border: 2px solid white;
+      }
+
       @keyframes rainbow {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
@@ -49,72 +69,109 @@
     </style>
   </head>
   <body style="text-align: center; padding: 0; border: 0; margin: 0;">
+    <!-- Visual HTML Box to output text errors directly on screen -->
+    <div id="error-log-box"><strong>CRITICAL ERRORS DETECTED:</strong><br></div>
+
     <div id="loading-text" style="color: white; font-size: 48px; font-family: cursive; text-align: center; margin-top: 20px;"> LOADING... 0 MB / 0 MB</div>
     <canvas id="unity-canvas" tabindex="-1" style="background: #231F20"></canvas>
-    <script src="Build/daddyreeyuki.loader.js"></script>
+    
+    <script>
+    // 1. Catcher for structural code errors or file missing alerts
+    const errorBox = document.getElementById("error-log-box");
+    function showScreenError(message) {
+      errorBox.style.display = "block";
+      errorBox.innerHTML += `• ${message}<br>`;
+    }
+    
+    window.onerror = function(message, source, lineno, colno, error) {
+      showScreenError(`${message} at ${source}:${lineno}`);
+      return false;
+    };
+
+    window.onunhandledrejection = function(event) {
+      showScreenError(`Promise Rejected: ${event.reason.message || event.reason}`);
+    };
+    </script>
+
+    <!-- Load the main Unity script loader -->
+    <script src="Build/daddyreeyuki.loader.js" onerror="showScreenError('Failed to download Build/daddyreeyuki.loader.js. Check your folder structures.')"></script>
+    
     <script>
     var loadingText = document.querySelector("#loading-text");
-    let totalBytes = 0;
-    let loadedBytes = 0;
-
-    // Hardcode your approximate target file size here in bytes (e.g., 120.36 MB = 126207078 bytes)
-    // If your build is larger or scales into GBs, adjust this number accordingly.
+    let fileProgress = {};
     const ESTIMATED_TOTAL_BYTES = 126207078; 
 
-    // Helper function to format bytes nicely into MB or GB
     function formatBytes(bytes) {
       if (bytes === 0) return "0 MB";
       const i = Math.floor(Math.log(bytes) / Math.log(1024));
-      // Force scaling to start at MB (index 2) even for small initial chunks
       const unitIndex = Math.max(2, i); 
       const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
       const value = (bytes / Math.pow(1024, unitIndex)).toFixed(2);
       return `${value} ${sizes[unitIndex]}`;
     }
 
-    async function fetchWithProgress(url) {
-      const response = await fetch(url);
-      const reader = response.body.getReader();
-      let chunks = [];
-      let received = 0;
-      while (true) {
-        const {
-          done,
-          value
-        } = await reader.read();
-        if (done) break;
-        received += value.length;
-        loadedBytes += value.length;
-        chunks.push(value);
-        
-        // Render dynamically using human-readable MB / GB formats
-        let formattedDone = formatBytes(loadedBytes);
-        let formattedTotal = formatBytes(ESTIMATED_TOTAL_BYTES);
-        
-        loadingText.textContent = `LOADING... ${formattedDone} / ${formattedTotal}`;
+    function updateOverallProgress() {
+      let loadedBytes = 0;
+      for (let url in fileProgress) {
+        loadedBytes += fileProgress[url];
       }
-      let fullBuffer = new Uint8Array(received);
-      let offset = 0;
-      for (let chunk of chunks) {
-        fullBuffer.set(chunk, offset);
-        offset += chunk.length;
-      }
-      return fullBuffer.buffer;
+      let formattedDone = formatBytes(loadedBytes);
+      let formattedTotal = formatBytes(ESTIMATED_TOTAL_BYTES);
+      loadingText.textContent = `LOADING... ${formattedDone} / ${formattedTotal}`;
+    }
+
+    function fetchWithProgress(url) {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.responseType = 'arraybuffer';
+
+        fileProgress[url] = 0;
+
+        xhr.onprogress = function(event) {
+          fileProgress[url] = event.loaded;
+          updateOverallProgress();
+        };
+
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.response);
+          } else {
+            reject(new Error(`Failed to load ${url} (Status: ${xhr.status} ${xhr.statusText})`));
+          }
+        };
+
+        xhr.onerror = function() {
+          reject(new Error(`Network error loading ${url}. This usually means CORS or Local Disk blocking.`));
+        };
+
+        xhr.send();
+      });
     }
 
     async function mergeFiles(fileParts, cacheKey) {
-      const cache = await caches.open("gash-cache");
-      const cachedResponse = await cache.match(cacheKey);
-      if (cachedResponse) {
-        const blob = await cachedResponse.blob();
-        return URL.createObjectURL(blob);
+      try {
+        const cache = await caches.open("gash-cache");
+        const cachedResponse = await cache.match(cacheKey);
+        if (cachedResponse) {
+          const blob = await cachedResponse.blob();
+          return URL.createObjectURL(blob);
+        }
+      } catch (e) {
+        showScreenError("Cache storage not supported or blocked in this browser mode.");
       }
+
       const buffers = await Promise.all(
         fileParts.map(part => fetchWithProgress(part))
       );
       const mergedBlob = new Blob(buffers);
-      const response = new Response(mergedBlob);
-      await cache.put(cacheKey, response);
+      
+      try {
+        const cache = await caches.open("gash-cache");
+        const response = new Response(mergedBlob);
+        await cache.put(cacheKey, response);
+      } catch(e) {}
+      
       return URL.createObjectURL(mergedBlob);
     }
 
@@ -125,38 +182,50 @@
       }
       return parts;
     }
+
     (async () => {
-      const [dataUrl, wasmUrl] = await Promise.all([
-        mergeFiles(getParts("Build/daddyreeyuki.data", 1, 5), "daddyreeyuki.data"),
-        mergeFiles(getParts("Build/daddyreeyuki.wasm", 1, 3), "daddyreeyuki.wasm")
-      ]);
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
+      try {
+        // Double-check if the engine file loaded completely
+        if (typeof createUnityInstance === 'undefined') {
+          throw new Error("createUnityInstance is not defined. The file daddyreeyuki.loader.js did not execute.");
+        }
 
-        var canvas = document.querySelector("#unity-canvas");
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        canvas.style.position = "fixed";
+        const [dataUrl, wasmUrl] = await Promise.all([
+          mergeFiles(getParts("Build/daddyreeyuki.data", 1, 5), "daddyreeyuki.data"),
+          mergeFiles(getParts("Build/daddyreeyuki.wasm", 1, 3), "daddyreeyuki.wasm")
+        ]);
 
-        document.body.style.textAlign = "left";
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+          var meta = document.createElement('meta');
+          meta.name = 'viewport';
+          meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+          document.getElementsByTagName('head')[0].appendChild(meta);
+
+          var canvas = document.querySelector("#unity-canvas");
+          canvas.style.width = "100%";
+          canvas.style.height = "100%";
+          canvas.style.position = "fixed";
+
+          document.body.style.textAlign = "left";
+        }
+
+        createUnityInstance(document.querySelector("#unity-canvas"), {
+          dataUrl: dataUrl,
+          frameworkUrl: "Build/daddyreeyuki.framework.js",
+          codeUrl: wasmUrl,
+          streamingAssetsUrl: "StreamingAssets",
+          companyName: "Joe Williams",
+          productName: "WhosYourDaddy",
+          productVersion: "1.0",
+        }).then(unityInstance => {
+          loadingText.remove();
+        }).catch(message => {
+          showScreenError("Unity Engine Crash: " + message);
+        });
+      } catch (err) {
+        showScreenError("Download Error: " + err.message);
+        loadingText.textContent = "ERROR LOADING GAME";
       }
-
-      createUnityInstance(document.querySelector("#unity-canvas"), {
-        dataUrl: dataUrl,
-        frameworkUrl: "Build/daddyreeyuki.framework.js",
-        codeUrl: wasmUrl,
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "Joe Williams",
-        productName: "WhosYourDaddy",
-        productVersion: "1.0",
-      }).then(unityInstance => {
-        loadingText.remove();
-      }).catch(message => {
-        alert(message);
-      });
     })();
     </script>
   </body>

@@ -83,6 +83,33 @@
         font-weight: 500;
       }
 
+      /* New Error Box Popup */
+      #error-box {
+        display: none;
+        background-color: #1a0505;
+        border: 2px solid #ff3333;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+        width: 80%;
+        max-width: 600px;
+        color: #ffcccc;
+        text-align: left;
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+      }
+      #error-box h3 {
+        margin-top: 0;
+        color: #ff4444;
+      }
+      #error-details {
+        font-family: monospace;
+        background: #000;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+
       @keyframes rainbow {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
@@ -98,6 +125,13 @@
         <div id="progress-fill"></div>
       </div>
       <div id="loading-metrics">0.00 MB / 0.00 MB (0%)</div>
+      
+      <!-- New Error Element -->
+      <div id="error-box">
+        <h3>🚨 Game Crash / Download Error Detour</h3>
+        <p>An issue blocked the game from initializing. Details below:</p>
+        <div id="error-details">No errors detected yet...</div>
+      </div>
     </div>
 
     <div class="webgl-content">
@@ -108,85 +142,109 @@
       const loadingOverlay = document.querySelector("#loading-overlay");
       const progressFill = document.querySelector("#progress-fill");
       const loadingMetrics = document.querySelector("#loading-metrics");
+      const errorBox = document.querySelector("#error-box");
+      const errorDetails = document.querySelector("#error-details");
       
-      // Keeps track of download metrics across parallel parts
       let partProgress = {};
       const totalTargetBytes = 304.68 * 1024 * 1024; 
+
+      // Visual helper to pop out crash summaries onto the screen
+      function displayScreenError(message) {
+        errorBox.style.display = "block";
+        errorDetails.textContent = message;
+        progressFill.style.background = "#ff3333";
+        loadingMetrics.style.color = "#ff4444";
+        loadingMetrics.textContent = "Download Halted due to Error.";
+      }
+
+      // Intercept any general script bugs or unhandled promise problems
+      window.addEventListener('error', function(e) {
+        displayScreenError(`Script Error: ${e.message}\nAt: ${e.filename}:${e.lineno}`);
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        displayScreenError(`Promise Rejected: ${e.reason}`);
+      });
 
       function updateOverallUI() {
         let overallLoaded = 0;
         let overallTotal = 0;
 
-        // Sum up metrics across all tracked download segments
         for (let key in partProgress) {
           overallLoaded += partProgress[key].loaded;
           overallTotal += partProgress[key].total;
         }
 
-        // Fallback target size if server headers miss content-lengths
         if (overallTotal === 0) overallTotal = totalTargetBytes;
 
         let mbDone = (overallLoaded / (1024 * 1024)).toFixed(2);
         let mbTotal = (overallTotal / (1024 * 1024)).toFixed(2);
         let percentage = Math.min(((overallLoaded / overallTotal) * 100), 100).toFixed(0);
 
-        // Render to UI elements dynamically
         progressFill.style.width = `${percentage}%`;
         loadingMetrics.textContent = `${mbDone} MB / ${mbTotal} MB (${percentage}%)`;
       }
 
       async function fetchWithProgress(url) {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Failed to fetch part: ${url}`);
-        
-        // Grab expected part size from server headers
-        const contentLength = +response.headers.get('Content-Length') || (totalTargetBytes / 16);
-        
-        partProgress[url] = { loaded: 0, total: contentLength };
-
-        const reader = response.body.getReader();
-        let chunks = [];
-        let received = 0;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status} - Server could not find file part: "${url}"`);
+          }
           
-          received += value.length;
-          partProgress[url].loaded = received;
-          chunks.push(value);
+          const contentLength = +response.headers.get('Content-Length') || (totalTargetBytes / 16);
+          partProgress[url] = { loaded: 0, total: contentLength };
 
-          // Fire calculation engine frame update
-          updateOverallUI();
-        }
+          const reader = response.body.getReader();
+          let chunks = [];
+          let received = 0;
 
-        let fullBuffer = new Uint8Array(received);
-        let offset = 0;
-        for (let chunk of chunks) {
-          fullBuffer.set(chunk, offset);
-          offset += chunk.length;
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            received += value.length;
+            partProgress[url].loaded = received;
+            chunks.push(value);
+
+            updateOverallUI();
+          }
+
+          let fullBuffer = new Uint8Array(received);
+          let offset = 0;
+          for (let chunk of chunks) {
+            fullBuffer.set(chunk, offset);
+            offset += chunk.length;
+          }
+          return fullBuffer.buffer;
+        } catch (err) {
+          displayScreenError(`Download Failed:\n${err.message}`);
+          throw err;
         }
-        return fullBuffer.buffer;
       }
 
       async function mergeFiles(fileParts, cacheKey) {
-        const cache = await caches.open("granny2-cache");
-        const cachedResponse = await cache.match(cacheKey);
-        
-        if (cachedResponse) {
-          progressFill.style.width = "100%";
-          loadingMetrics.textContent = "304.68 MB / 304.68 MB (100%)";
-          const blob = await cachedResponse.blob();
-          return URL.createObjectURL(blob);
-        }
+        try {
+          const cache = await caches.open("granny2-cache");
+          const cachedResponse = await cache.match(cacheKey);
+          
+          if (cachedResponse) {
+            progressFill.style.width = "100%";
+            loadingMetrics.textContent = "304.68 MB / 304.68 MB (100%)";
+            const blob = await cachedResponse.blob();
+            return URL.createObjectURL(blob);
+          }
 
-        const buffers = await Promise.all(
-          fileParts.map(part => fetchWithProgress(part))
-        );
-        const mergedBlob = new Blob(buffers);
-        const response = new Response(mergedBlob);
-        await cache.put(cacheKey, response);
-        return URL.createObjectURL(mergedBlob);
+          const buffers = await Promise.all(
+            fileParts.map(part => fetchWithProgress(part))
+          );
+          const mergedBlob = new Blob(buffers);
+          const response = new Response(mergedBlob);
+          await cache.put(cacheKey, response);
+          return URL.createObjectURL(mergedBlob);
+        } catch (err) {
+          displayScreenError(`Merging Error:\n${err.message}`);
+          throw err;
+        }
       }
 
       function getParts(file, start, end) {
@@ -198,38 +256,47 @@
       }
 
       (async () => {
-        // Step 1: Piece split data files together
-        const [dataUrl] = await Promise.all([
-          mergeFiles(getParts("Build/Granny2.data.unityweb", 1, 16), "Granny2.data.unityweb"),
-        ]);
+        try {
+          // Step 1: Piece split data files together
+          const [dataUrl] = await Promise.all([
+            mergeFiles(getParts("Build/Granny2.data.unityweb", 1, 16), "Granny2.data.unityweb"),
+          ]);
 
-        const originalOpen = XMLHttpRequest.prototype.open;
-        const originalSend = XMLHttpRequest.prototype.send;
+          const originalOpen = XMLHttpRequest.prototype.open;
+          const originalSend = XMLHttpRequest.prototype.send;
 
-        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-          this._requestUrl = url;
-          if (url.includes("Granny2.data.unityweb")) {
-            url = dataUrl;
+          XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+            this._requestUrl = url;
+            if (url.includes("Granny2.data.unityweb")) {
+              url = dataUrl;
+            }
+            this._modifiedUrl = url;
+            return originalOpen.call(this, method, url, ...rest);
+          };
+
+          XMLHttpRequest.prototype.send = function (...args) {
+            if (this._requestUrl && (this._requestUrl.includes(".wasm") || this._requestUrl.includes(".js"))) {
+              this.addEventListener("loadend", () => {
+                // If there's an error on screen, don't hide the overlay
+                if (errorBox.style.display !== "block") {
+                  loadingOverlay.style.opacity = "0";
+                  setTimeout(() => {
+                    loadingOverlay.style.display = "none";
+                  }, 500);
+                }
+              });
+            }
+            return originalSend.apply(this, args);
+          };
+
+          // Step 2: Boot Unity
+          if (typeof UnityLoader === "undefined") {
+            throw new Error("UnityLoader is missing. Check if 'Build/UnityLoader.js' path is correct.");
           }
-          this._modifiedUrl = url;
-          return originalOpen.call(this, method, url, ...rest);
-        };
-
-        XMLHttpRequest.prototype.send = function (...args) {
-          // Fade out the overlay once WebAssembly engine hooks look finished
-          if (this._requestUrl && (this._requestUrl.includes(".wasm") || this._requestUrl.includes(".js"))) {
-            this.addEventListener("loadend", () => {
-              loadingOverlay.style.opacity = "0";
-              setTimeout(() => {
-                loadingOverlay.style.display = "none";
-              }, 500);
-            });
-          }
-          return originalSend.apply(this, args);
-        };
-
-        // Step 2: Boot Unity
-        var unityInstance = UnityLoader.instantiate("unityContainer", "Build/Granny2.json", {onProgress: UnityProgress});
+          var unityInstance = UnityLoader.instantiate("unityContainer", "Build/Granny2.json", {onProgress: UnityProgress});
+        } catch (err) {
+          displayScreenError(`Initialization Error:\n${err.message}`);
+        }
       })();
     </script>
   </body>

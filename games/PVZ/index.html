@@ -1,63 +1,68 @@
 <!doctype html>
 <html>
-<body>
-  <base href="https://cdn.jsdelivr.net/gh/web-ports/pvz@latest/">
+<head>
+  <meta charset="utf-8">
+  <title>Plants vs. Zombies - Local</title>
   <style>
     #loading-text {
-  font-weight: bold;
-  background: linear-gradient(
-    270deg,
-    #ff0000,
-    #ff7f00,
-    #ffff00,
-    #00ff00,
-    #0000ff,
-    #4b0082,
-    #8f00ff
-  );
-  background-size: 400% 400%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: rainbow 3s ease infinite;
-}
+      font-weight: bold;
+      background: linear-gradient(
+        270deg,
+        #ff0000,
+        #ff7f00,
+        #ffff00,
+        #00ff00,
+        #0000ff,
+        #4b0082,
+        #8f00ff
+      );
+      background-size: 400% 400%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rainbow 3s ease infinite;
+    }
 
-@keyframes rainbow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
+    @keyframes rainbow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
   </style>
-<div id="loading-text"
-    style="color: white; font-size: 48px; font-family: cursive; text-align: center; margin-top: 20px;"> LOADING...
+</head>
+<body>
+
+  <div id="loading-text" style="color: white; font-size: 48px; font-family: cursive; text-align: center; margin-top: 20px;"> 
+    LOADING...
   </div>
-<canvas id="canvas" width="800" height="600" style="display:block; outline:0"></canvas>
+  
+  <canvas id="canvas" width="800" height="600" style="display:block; outline:0"></canvas>
 
-<textarea
-  id="pvz-soft-keyboard"
-  style="position:fixed; top:0; left:0; width:1px; height:1px; opacity:0; pointer-events:none; font-size:16px"
-  autocapitalize="off"
-  autocomplete="off"
-  autocorrect="off"
-  enterkeyhint="done"
-  spellcheck="false"
-></textarea>
+  <textarea
+    id="pvz-soft-keyboard"
+    style="position:fixed; top:0; left:0; width:1px; height:1px; opacity:0; pointer-events:none; font-size:16px"
+    autocapitalize="off"
+    autocomplete="off"
+    autocorrect="off"
+    enterkeyhint="done"
+    spellcheck="false"
+  ></textarea>
 
-<script>
-  let _res, _rej;
-  window.moduleReadyPromise = new Promise((r, e) => { _res = r; _rej = e; });
+  <script>
+    let _res, _rej;
+    window.moduleReadyPromise = new Promise((r, e) => { _res = r; _rej = e; });
 
-  var Module = {
-    canvas: document.getElementById("canvas"),
-    noInitialRun: true,
-    onRuntimeInitialized: _res,
-    onAbort: e => _rej(e),
-    print: console.log,
-    printErr: console.warn,
-  };
-</script>
+    var Module = {
+      canvas: document.getElementById("canvas"),
+      noInitialRun: true,
+      onRuntimeInitialized: _res,
+      onAbort: e => _rej(e),
+      print: console.log,
+      printErr: console.warn,
+    };
+  </script>
 
-<script>
-var loadingText = document.querySelector("#loading-text");
+  <script>
+    var loadingText = document.querySelector("#loading-text");
     let totalBytes = 0;
     let loadedBytes = 0;
 
@@ -67,10 +72,7 @@ var loadingText = document.querySelector("#loading-text");
       let chunks = [];
       let received = 0;
       while (true) {
-        const {
-          done,
-          value
-        } = await reader.read();
+        const { done, value } = await reader.read();
         if (done) break;
         received += value.length;
         loadedBytes += value.length;
@@ -111,60 +113,65 @@ var loadingText = document.querySelector("#loading-text");
       }
       return parts;
     }
+
     (async () => {
+      // Fetches local part files (main.pak.part1, etc.)
       const [pakurl] = await Promise.all([
         mergeFiles(getParts("main.pak", 1, 3), "main.pak"),
       ]);
+      
+      // Inject the local script dynamically
       let ns = document.createElement("script");
-      ns.src="pvz.js";
+      ns.src = "pvz.js";
       document.body.appendChild(ns);
-    await moduleReadyPromise;
+      await moduleReadyPromise;
 
-    const files = [
-      [pakurl, "main.pak"],
-      ["properties/Layout.xml", "properties/Layout.xml"],
-      ["properties/partner.xml.sig", "properties/partner.xml.sig"],
-      ["properties/default.xml", "properties/default.xml"],
-      ["properties/partner.xml", "properties/partner.xml"],
-      ["properties/partner_logo.jpg", "properties/partner_logo.jpg"],
-    ];
+      // Local asset mapping (Source path -> WebAssembly Virtual FS path)
+      const files = [
+        [pakurl, "main.pak"],
+        ["properties/Layout.xml", "properties/Layout.xml"],
+        ["properties/partner.xml.sig", "properties/partner.xml.sig"],
+        ["properties/default.xml", "properties/default.xml"],
+        ["properties/partner.xml", "properties/partner.xml"],
+        ["properties/partner_logo.jpg", "properties/partner_logo.jpg"],
+      ];
 
-    for (const [src, dest] of files) {
-      const data = new Uint8Array(await (await fetch(src)).arrayBuffer());
-      const parts = dest.split("/");
-      let dir = "/";
-      for (let i = 0; i < parts.length - 1; i++) {
-        dir += (dir === "/" ? "" : "/") + parts[i];
-        try { Module.FS.mkdir(dir); } catch {}
+      for (const [src, dest] of files) {
+        const data = new Uint8Array(await (await fetch(src)).arrayBuffer());
+        const parts = dest.split("/");
+        let dir = "/";
+        for (let i = 0; i < parts.length - 1; i++) {
+          dir += (dir === "/" ? "" : "/") + parts[i];
+          try { Module.FS.mkdir(dir); } catch {}
+        }
+        Module.FS.writeFile("/" + dest, data);
       }
-      Module.FS.writeFile("/" + dest, data);
-    }
 
-    try { Module.FS.mkdir("/saves"); } catch {}
-    try { Module.FS.mount(Module.FS.filesystems.IDBFS, {}, "/saves"); } catch {}
-    await new Promise(r => Module.FS.syncfs(true, r));
+      try { Module.FS.mkdir("/saves"); } catch {}
+      try { Module.FS.mount(Module.FS.filesystems.IDBFS, {}, "/saves"); } catch {}
+      await new Promise(r => Module.FS.syncfs(true, r));
 
-    const c = document.getElementById("canvas");
-    const resize = () => {
-      const s = Math.min(innerWidth / 800, innerHeight / 600);
-      c.style.width  = s * 800 + "px";
-      c.style.height = s * 600 + "px";
-    };
-    resize();
-    addEventListener("resize", resize);
-    addEventListener("fullscreenchange", resize);
+      const c = document.getElementById("canvas");
+      const resize = () => {
+        const s = Math.min(innerWidth / 800, innerHeight / 600);
+        c.style.width  = s * 800 + "px";
+        c.style.height = s * 600 + "px";
+      };
+      resize();
+      addEventListener("resize", resize);
+      addEventListener("fullscreenchange", resize);
 
-    document.body.style = "margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden";
+      document.body.style = "margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden";
 
-    const sync = () => Module.FS.syncfs(false, () => {});
-    setInterval(sync, 5000);
-    addEventListener("visibilitychange", () => document.hidden && sync());
-    addEventListener("pagehide", sync);
+      const sync = () => Module.FS.syncfs(false, () => {});
+      setInterval(sync, 5000);
+      addEventListener("visibilitychange", () => document.hidden && sync());
+      addEventListener("pagehide", sync);
 
-    Module.callMain([]);
-    loadingText.remove();
-  })();
-</script>
+      Module.callMain([]);
+      loadingText.remove();
+    })();
+  </script>
 
 </body>
 </html>

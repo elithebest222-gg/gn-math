@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HLS Video Downloader</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background-color: #f9f9f9;
+        }
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #0070f3;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        button:disabled {
+            background-color: #a0aec0;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #edf2f7;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+        .progress-fill {
+            height: 10px;
+            width: 0%;
+            background-color: #38a169;
+            border-radius: 4px;
+            transition: width 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>HLS (.m3u8) Downloader</h2>
+    <p style="font-size: 14px; color: #666;">Enter a direct HLS segment playlist URL to download and stitch video chunks entirely in your browser.</p>
+    
+    <label for="url">M3U8 Stream URL:</label>
+    <input type="text" id="url" placeholder="https://example.com">
+    
+    <button id="downloadBtn" onclick="startDownload()">Download Video</button>
+
+    <div id="status">Ready</div>
+    <div class="progress-bar" id="progressContainer">
+        <div class="progress-fill" id="progressBar"></div>
+    </div>
+</div>
+
+<script>
+async function startDownload() {
+    const urlInput = document.getElementById('url').value.trim();
+    const statusDiv = document.getElementById('status');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+
+    if (!urlInput) {
+        alert("Please enter a valid .m3u8 URL");
+        return;
+    }
+
+    // Reset UI state
+    downloadBtn.disabled = true;
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
+    
+    try {
+        statusDiv.innerText = "Fetching playlist manifest...";
+        const response = await fetch(urlInput);
+        if (!response.ok) throw new Error("Could not fetch the .m3u8 file.");
+        
+        const manifestText = await response.text();
+        
+        // Resolve base URL for relative paths inside the playlist
+        const urlObj = new URL(urlInput);
+        const baseUrl = urlObj.href.substring(0, urlObj.href.lastIndexOf("/") + 1);
+
+        // Parse lines to pull out segment URLs
+        const lines = manifestText.split('\n');
+        const segments = [];
+
+        for (let line of lines) {
+            line = line.trim();
+            if (line && !line.startsWith('#')) {
+                // If it's a relative URL, make it absolute
+                if (!line.startsWith('http')) {
+                    segments.push(baseUrl + line);
+                } else {
+                    segments.push(line);
+                }
+            }
+        }
+
+        if (segments.length === 0) {
+            throw new Error("No video segments found. Make sure this isn't a Master playlist containing other resolution URLs.");
+        }
+
+        statusDiv.innerText = `Found ${segments.length} segments. Starting download...`;
+        
+        const videoChunks = [];
+
+        // Download loop
+        for (let i = 0; i < segments.length; i++) {
+            statusDiv.innerText = `Downloading chunk ${i + 1} of ${segments.length}...`;
+            
+            const segmentResponse = await fetch(segments[i]);
+            if (!segmentResponse.ok) {
+                console.warn(`Skipped failed chunk: ${segments[i]}`);
+                continue; // Skip corrupted or missing chunks
+            }
+
+            const arrayBuffer = await segmentResponse.arrayBuffer();
+            videoChunks.push(arrayBuffer);
+
+            // Update progress bar UI
+            const percent = Math.round(((i + 1) / segments.length) * 100);
+            progressBar.style.width = `${percent}%`;
+        }
+
+        statusDiv.innerText = "Stitching video files together...";
+        
+        // Compile binary chunks into a single media Blob container
+        const finalBlob = new Blob(videoChunks, { type: 'video/mp4' });
+        const downloadUrl = URL.createObjectURL(finalBlob);
+
+        statusDiv.innerText = "Triggering file save!";
+        
+        // Push the file to browser downloads
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = "downloaded_stream.mp4";
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+        statusDiv.innerText = "Download complete!";
+
+    } catch (error) {
+        statusDiv.innerText = `Error: ${error.message}`;
+        console.error(error);
+    } finally {
+        downloadBtn.disabled = false;
+    }
+}
+</script>
+
+</body>
+</html>

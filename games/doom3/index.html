@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en-us">
 <head>
-  <base href="https://cdn.jsdelivr.net/gh/web-ports/doom-3@main/">
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>doom 3</title>
@@ -189,7 +188,7 @@
             <span id="console-close">X</span>
         </div>
         <div id="console-output">
-            doom 3 consle baby<br>
+            doom 3 console baby<br>
             <span id="console-log"></span>
         </div>
         <div id="console-input-area">
@@ -208,12 +207,15 @@
   var consoleLog = document.getElementById('console-log');
   var consoleSubmit = document.getElementById('console-submit');
   var consoleClose = document.getElementById('console-close');
+  var consoleHeader = document.getElementById('console-header');
 
   function toggleConsole() {
     var isVisible = consoleElement.style.display === 'flex';
     if (isVisible) {
         consoleElement.style.display = 'none';
-        Module.canvas.focus();
+        if (typeof Module !== 'undefined' && Module.canvas) {
+            Module.canvas.focus();
+        }
     } else {
         consoleElement.style.display = 'flex';
         consoleInput.focus();
@@ -255,7 +257,9 @@
   function dragStart(e) {
     initialX = e.clientX - xOffset;
     initialY = e.clientY - yOffset;
-    isDragging = true;
+    if (e.target === consoleHeader) {
+      isDragging = true;
+    }
   }
 
   function dragEnd(e) {
@@ -273,93 +277,14 @@
       xOffset = currentX;
       yOffset = currentY;
 
-      consoleElement.style.transform = 'translate(' + currentX + 'px, ' + currentY + 'px)';
+      consoleElement.style.transform = "translate(calc(-50% + " + currentX + "px), calc(-50% + " + currentY + "px))";
     }
   }
 
-  document.getElementById('console-header').addEventListener('mousedown', dragStart);
+  consoleHeader.addEventListener('mousedown', dragStart);
   document.addEventListener('mouseup', dragEnd);
   document.addEventListener('mousemove', drag);
-
-
-  var Module = {
-    preRun: [],
-    postRun: [],
-    print: (function () {
-      return function (text) {
-        if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-        
-        var logEntry = document.createElement('div');
-        logEntry.innerHTML = text;
-        consoleLog.appendChild(logEntry);
-        
-        console.log(text);
-        consoleLog.parentElement.scrollTop = consoleLog.parentElement.scrollHeight;
-      };
-    })(),
-    printErr: function (text) {
-      if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-      console.error(text);
-    },
-    canvas: (function () {
-      var canvas = document.getElementById('canvas');
-
-      canvas.addEventListener("webglcontextlost", function (e) {
-        console.error('WebGL context lost. You will need to reload the page.');
-        e.preventDefault();
-      }, false);
-
-      return canvas;
-    })(),
-    hideStatus: function() {
-      document.getElementById('loading-overlay').style.display = "none";
-    },
-    showStatus: function() {
-      document.getElementById('loading-overlay').style.display = "flex";
-    },
-    setStatus: function (text) {
-      if (!Module.setStatus.last) Module.setStatus.last = {time: Date.now(), text: ''};
-      if (text === Module.setStatus.last.text) return;
-      var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
-      var now = Date.now();
-      if (m && now - Module.setStatus.last.time < 30) return;
-      Module.setStatus.last.time = now;
-      Module.setStatus.last.text = text;
-      if (m) {
-        text = m[1];
-        progressElement.value = parseInt(m[2]) * 100;
-        progressElement.max = parseInt(m[4]) * 100;
-        progressElement.hidden = false;
-        spinnerElement.hidden = false;
-      } else {
-        progressElement.value = null;
-        progressElement.max = null;
-        progressElement.hidden = true;
-        if (!text) spinnerElement.style.display = 'none';
-      }
-      statusElement.innerHTML = text;
-    },
-    totalDependencies: 0,
-    monitorRunDependencies: function (left) {
-      this.totalDependencies = Math.max(this.totalDependencies, left);
-      Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
-      if (!left) {
-        Module.hideStatus();
-      }
-      else {
-        Module.showStatus();
-      }
-    }
-  };
-  Module.setStatus('Downloading...');
-  window.onerror = function (event) {
-    Module.setStatus('Exception thrown, see JavaScript console');
-    spinnerElement.style.display = 'none';
-    Module.setStatus = function (text) {
-      if (text) Module.printErr('[post-exception status] ' + text);
-    };
-  };
 </script>
-<script async type="text/javascript" src="d3wasm.js"></script>
+
 </body>
 </html>

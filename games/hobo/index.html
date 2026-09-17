@@ -1,0 +1,60 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Dumb Ways to Die</title>
+        <style>
+            body, html {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                background-color: #000; /* Keeps the background black while loading */
+            }
+            #ruffle {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="ruffle"></div>
+        
+        <!-- Changed to use your local uploaded ruffle.js file -->
+        <script src="ruffle.js"></script>
+        
+        <script>
+            // Tells Ruffle to look in your root folder for the .wasm engine files
+            window.RufflePlayer = window.RufflePlayer || {};
+            window.RufflePlayer.config = {
+                "publicPath": "./" 
+            };
+
+            var swfobject = {};
+
+            swfobject.embedSWF = function(url, cont) {
+                var ruffle = window.RufflePlayer.newest(),
+                    player = ruffle.createPlayer();
+
+                // Append the player to the container and stretch it fullscreen
+                document.getElementById(cont).appendChild(player);
+                player.style.width = '100%';
+                player.style.height = '100%';
+
+                // Load the SWF file path
+                player.load({ url: url });
+
+                // Keeps the player matched to the window size if resized
+                window.addEventListener('resize', function() {
+                    player.style.width = '100%';
+                    player.style.height = '100%';
+                });
+            }
+
+            // Points directly to the file path in your data folder
+            swfobject.embedSWF('data/main.swf', 'ruffle');
+        </script>
+    </body>
+</html>

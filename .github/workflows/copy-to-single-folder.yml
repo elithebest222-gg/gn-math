@@ -1,6 +1,6 @@
-name: Copy Files to games-buckshot
+name: Copy Files Into Existing Folder
 on:
-  workflow_dispatch: # This adds the manual "Run" button
+  workflow_dispatch:
 
 jobs:
   copy-files:
@@ -11,11 +11,10 @@ jobs:
 
       - name: Clone your source game repository
         run: |
-          git clone --depth 1 https://github.com temp-game
+          git clone --depth 1 https://github.com/elithebest222-gg/Buckshot-NEWEST-Port temp-game
 
-      - name: Move files directly into games/Buckshot
+      - name: Push files directly into your folder
         run: |
-          # Creates the nested folder structure automatically
           mkdir -p games/Buckshot
           cp -r temp-game/* games/Buckshot/
           rm -rf temp-game
@@ -23,7 +22,7 @@ jobs:
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@://github.com"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add games/Buckshot/
           git commit -m "Successfully moved all 37+ game files into games/Buckshot" || echo "No changes"
           git push

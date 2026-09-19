@@ -1,8 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<base href="https://rawcdn.githack.com/Stratus-Games/Buckshot-NEWEST-Port/V1.14/">
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
 		<title>Buckshot Roulette</title>
@@ -274,7 +272,7 @@ body {
 				});
 			}
 
-			// Primary Lifecycle Setup Coordinator
+						// Primary Lifecycle Setup Coordinator
 			window.addEventListener('DOMContentLoaded', async () => {
 				const progressBar = document.getElementById('status-progress');
 				const statusNotice = document.getElementById('status-notice');
@@ -287,7 +285,6 @@ body {
 					await downloadAndCacheAssets(db, progressBar, statusNotice);
 
 					statusNotice.textContent = 'Verification successful. Initializing real-time stream routing structures...';
-					
 
 					// Mount backpressure stream interceptors onto network sockets
 					setupStreamingFetchInterceptor(db);
@@ -328,7 +325,6 @@ body {
 						return;
 					}
 					statusOverlay.style.visibility = 'visible';
-
 					statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
 					statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
 					statusMode = mode;
@@ -349,7 +345,6 @@ body {
 					console.error(err);
 					if (err instanceof Error) {
 						setStatusNotice(err.message);
-
 					} else if (typeof err === 'string') {
 						setStatusNotice(err);
 					} else {
@@ -369,7 +364,6 @@ body {
 						try {
 							serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
 						} catch (err) {
-
 							serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
 						}
 						Promise.race([
@@ -389,7 +383,6 @@ body {
 						});
 					} else {
 						const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
-
 						displayFailureNotice(missingMsg + missing.join('\n'));
 					}
 				} else {
@@ -409,8 +402,3 @@ body {
 					}, displayFailureNotice);
 				}
 			}
-		</script>
-	</body>
-</html>
-
-

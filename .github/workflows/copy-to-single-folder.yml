@@ -1,11 +1,6 @@
-name: Copy Files Into One Folder
+name: Copy Files to games-buckshot
 on:
-  workflow_dispatch:
-    inputs:
-      folder_name:
-        description: 'Type your single folder name here'
-        required: true
-        default: 'games' # You can change this to Buckshot or whatever you want
+  workflow_dispatch: # This adds the manual "Run" button
 
 jobs:
   copy-files:
@@ -18,16 +13,17 @@ jobs:
         run: |
           git clone --depth 1 https://github.com temp-game
 
-      - name: Push files directly into your folder
+      - name: Move files directly into games/Buckshot
         run: |
-          mkdir -p "${{ github.event.inputs.folder_name }}"
-          cp -r temp-game/* "${{ github.event.inputs.folder_name }}/"
+          # Creates the nested folder structure automatically
+          mkdir -p games/Buckshot
+          cp -r temp-game/* games/Buckshot/
           rm -rf temp-game
 
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@://github.com"
-          git add "${{ github.event.inputs.folder_name }}/"
-          git commit -m "Moved all 37+ files into folder" || echo "No changes"
+          git add games/Buckshot/
+          git commit -m "Successfully moved all 37+ game files into games/Buckshot" || echo "No changes"
           git push

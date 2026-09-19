@@ -1,6 +1,6 @@
 name: Copy Speed Stars
 on:
-  workflow_dispatch: # This adds the manual "Run" button
+  workflow_dispatch:
 
 jobs:
   copy-files:
@@ -9,21 +9,21 @@ jobs:
       - name: Checkout your repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches full history to prevent branch push conflicts
+          fetch-depth: 0
 
-      - name: Clone source web-port repository
+      - name: Clone only the speed-stars subfolder
         run: |
-          git clone --depth 1 https://github.com/genizy/web-port/tree/main/speed-stars temp-repo
+          # Use sparse-checkout parameters to download just the targeted directory
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/genizy/web-port temp-repo
+          git -C temp-repo sparse-checkout set speed-stars
 
       - name: Move Speed Stars and clean CDN tags
         run: |
-          # Create your targeted folder path
           mkdir -p games/speed-stars
           
-          # Move only the speed-stars files over
+          # Move files from the sparse subdirectory structure over
           cp -r temp-repo/speed-stars/* games/speed-stars/
           
-          # Automatically strip out any problematic CDN base href line from index.html
           if [ -f games/speed-stars/index.html ]; then
             sed -i '/<base href=/d' games/speed-stars/index.html
           fi
@@ -35,8 +35,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add games/speed-stars/
-          git commit -m "Successfully imported Speed Stars and stripped CDN paths" || echo "No changes"
+          git commit -m "Successfully imported Speed Stars subfolder" || echo "No changes"
           
-          # Sync right before uploading to bypass remote block issues
           git pull --rebase origin main
           git push origin main

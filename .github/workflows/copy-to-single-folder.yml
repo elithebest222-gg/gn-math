@@ -1,0 +1,33 @@
+name: Copy Files Into One Folder
+on:
+  workflow_dispatch:
+    inputs:
+      folder_name:
+        description: 'Type your single folder name here'
+        required: true
+        default: 'games' # You can change this to Buckshot or whatever you want
+
+jobs:
+  copy-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout your repository
+        uses: actions/checkout@v4
+
+      - name: Clone your source game repository
+        run: |
+          git clone --depth 1 https://github.com temp-game
+
+      - name: Push files directly into your folder
+        run: |
+          mkdir -p "${{ github.event.inputs.folder_name }}"
+          cp -r temp-game/* "${{ github.event.inputs.folder_name }}/"
+          rm -rf temp-game
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@://github.com"
+          git add "${{ github.event.inputs.folder_name }}/"
+          git commit -m "Moved all 37+ files into folder" || echo "No changes"
+          git push

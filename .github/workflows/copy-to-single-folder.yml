@@ -1,6 +1,6 @@
-name: Copy Hollow Knight Webport
+name: Copy Hollow Knight
 on:
-  workflow_dispatch: # Adds the manual "Run" button
+  workflow_dispatch:
 
 jobs:
   copy-files:
@@ -8,24 +8,26 @@ jobs:
     steps:
       - name: Checkout your repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches full history to allow clean merging
 
-      - name: Clone the Hollow Knight repository
+      - name: Clone Hollow Knight repository
         run: |
-          git clone --depth 1 https://github.com/elithebest222-gg/hollow-knight temp-game
+          git clone --depth 1 https://github.com/elithebest222-gg/hollow-knight/ temp-game
 
-      - name: Push files directly into games/hollow-knight
+      - name: Move files directly into games/hollow-knight
         run: |
-          # Create the game folder structure
           mkdir -p games/hollow-knight
-          
-          # Copy all folders and files over
           cp -r temp-game/* games/hollow-knight/
           rm -rf temp-game
 
-      - name: Commit and push changes
+      - name: Commit and push changes safely
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add games/hollow-knight/
-          git commit -m "Successfully imported Hollow Knight webport assets" || echo "No changes to commit"
-          git push
+          git commit -m "Successfully imported Hollow Knight webport assets" || echo "No changes"
+          
+          # This forces a quick sync right before uploading to bypass the lock error
+          git pull --rebase origin main
+          git push origin main

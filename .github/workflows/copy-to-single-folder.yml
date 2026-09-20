@@ -1,4 +1,4 @@
-name: Copy Web Dashers Port
+name: Copy Speed Stars Port
 on:
   workflow_dispatch:
 
@@ -11,72 +11,42 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js Environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Clone Web Dashers source repository
+      - name: Clone Speed Stars source repository
         run: |
-          git clone --depth 1 https://github.com/elithebest222-gg/web-dashers/ temp-repo
+          git clone --depth 1 https://github.com/elithebest222-gg/speed-stars temp-repo
 
-      - name: Verify, Install, and Build Project
+      - name: Move Assets to Target Location
         run: |
-          # CRITICAL CHECK: Verify source configuration file exists
-          if [ ! -f "temp-repo/package.json" ]; then
-            echo "::error::package.json configuration file missing from source repository!"
-            exit 1
-          fi
-
-          # Change to source directory to run npm workflows
-          cd temp-repo
+          # Setup destination root structure
+          mkdir -p games/speed-stars
           
-          # Install development and production dependencies
-          npm ci || npm install
-          
-          # Execute the production compilation script
-          npm run build --if-present
-
-      - name: Move Compiled Assets to Target
-        run: |
-          # Create deployment destination directory structure
-          mkdir -p games/web-dashers
-          
-          # Check for common build output directories (dist, build) or fallback to root if static
-          if [ -d "temp-repo/dist" ]; then
-            cp -r temp-repo/dist/* games/web-dashers/
-          elif [ -d "temp-repo/build" ]; then
-            cp -r temp-repo/build/* games/web-dashers/
-          else
-            echo "::warning::No dedicated build bundle folder found; copying root static assets instead."
-            cp -r temp-repo/* games/web-dashers/
-            rm -rf games/web-dashers/node_modules
-          fi
-          
-          # Clean up workspace metadata and temp directories
-          rm -rf games/web-dashers/.git
-          rm -rf temp-repo
+          # Use rsync to safely migrate files while excluding git tracking records
+          rsync -av --exclude='.git' temp-repo/ games/speed-stars/
 
       - name: Remove Base Line in Index
         run: |
-          TARGET_INDEX="games/web-dashers/index.html"
+          TARGET_INDEX="games/speed-stars/index.html"
           
-          # Remove any line containing the <base href... tag completely
           if [ -f "$TARGET_INDEX" ]; then
+            # Strips out any variation of the <base href=... > tag securely
             sed -i '/<base href=/d' "$TARGET_INDEX"
             echo "Successfully removed base href tags from $TARGET_INDEX"
           else
-            echo "::warning::index.html not found at $TARGET_INDEX, skipping base tag removal."
+            echo "::error::index.html not found at $TARGET_INDEX! Verify target repository structure."
+            exit 1
           fi
+
+      - name: Clean Up Temporary Workspace
+        run: |
+          rm -rf temp-repo
 
       - name: Commit and push changes safely
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@://github.com"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/web-dashers/
-          git commit -m "Imported Web Dashers distribution assets and stripped base line from index.html" || echo "No changes to commit"
+          git add games/speed-stars/
+          git commit -m "Imported Speed Stars assets and stripped base line from index.html" || echo "No changes to commit"
           
-          # Rebase onto your main branch to sync concurrent workspace adjustments
           git pull --rebase origin main
           git push origin main

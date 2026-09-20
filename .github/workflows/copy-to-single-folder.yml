@@ -1,4 +1,4 @@
-name: Copy Celeste Game
+name: Copy 60 Seconds Web Port
 on:
   workflow_dispatch:
 
@@ -11,37 +11,49 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone Celeste source repository
+      - name: Clone 60 Seconds source repository
         run: |
-          git clone --depth 1 https://github.com/web-ports/celeste temp-repo
+          git clone --depth 1 https://github.com/usheje883-maker/60-Seconds-Webport temp-repo
 
-      - name: Verify and Move Web Frame Assets
+      - name: Verify and Move Unity WebGL Assets
         run: |
           # Create destination directory structure
-          mkdir -p games/celeste
+          mkdir -p games/60-seconds
           
-          # CRITICAL CHECK: Verify core framework and web engine dependencies exist
-          if [ ! -d "temp-repo/_framework" ] || [ ! -f "temp-repo/bundle.js" ] || [ ! -f "temp-repo/index.html" ]; then
-            echo "::error::Core compilation files (_framework/, bundle.js, or index.html) were not found in the source!"
+          # CRITICAL CHECK: Verify Unity WebGL core compilation directories exist
+          if [ ! -d "temp-repo/Build" ] || [ ! -d "temp-repo/TemplateData" ] || [ ! -f "temp-repo/index.html" ]; then
+            echo "::error::Core Unity compilation assets (Build/, TemplateData/, or index.html) were not found in the source!"
             exit 1
           fi
 
-          # Copy framework bundles, assets, styles, and web indexes
-          cp -r temp-repo/* games/celeste/
+          # Copy Unity WebGL build folders, streaming assets, and web layout indexes
+          cp -r temp-repo/* games/60-seconds/
           
           # Remove Git metadata from the copied directory if any slipped through
-          rm -rf games/celeste/.git
+          rm -rf games/60-seconds/.git
           
           # Clean up the temporary workspace clone
           rm -rf temp-repo
 
+      - name: Remove Base Line in Index
+        run: |
+          TARGET_INDEX="games/60-seconds/index.html"
+          
+          # Remove any line containing the <base href... tag completely
+          if [ -f "$TARGET_INDEX" ]; then
+            sed -i '/<base href=/d' "$TARGET_INDEX"
+            echo "Successfully removed base href tags from $TARGET_INDEX"
+          else
+            echo "::warning::index.html not found, skipping base tag removal."
+          fi
+
       - name: Commit and push changes safely
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.email "github-actions[bot]@://github.com"
           
-          git add games/celeste/
-          git commit -m "Successfully imported Celeste web port framework and assets" || echo "No changes to commit"
+          git add games/60-seconds/
+          git commit -m "Imported 60 Seconds web port and stripped base line from index.html" || echo "No changes to commit"
           
           # Rebase onto your main branch to sync any concurrent repository modifications
           git pull --rebase origin main

@@ -1,4 +1,4 @@
-name: Copy Fish Game
+name: Copy Christmas Massacre Game
 on:
   workflow_dispatch:
 
@@ -11,30 +11,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone the fish port repository
+      - name: Clone the Christmas Massacre port repository
         run: |
           # Shallow clone the repository to quickly download files
-          git clone --depth 1 https://github.com/web-ports/fish temp-repo
+          git clone --depth 1 http://github.com/web-ports/christmas-massacre temp-repo
 
-      - name: Verify and Move Fish Build Assets
+      - name: Verify and Move Christmas Massacre Build Assets
         run: |
           # Create target directory
-          mkdir -p games/fish
+          mkdir -p games/christmas-massacre
           
-          # CRITICAL CHECK: Verify /Build, /TemplateData and index.html all exist
-          if [ ! -d "temp-repo/Build" ] || [ ! -d "temp-repo/TemplateData" ] || [ ! -f "temp-repo/index.html" ]; then
-            echo "::error::Required files (/Build, /TemplateData, or index.html) were not found in the source!"
+          # CRITICAL CHECK: Verify /Build and index.html both exist
+          if [ ! -d "temp-repo/Build" ] || [ ! -f "temp-repo/index.html" ]; then
+            echo "::error::Required files (/Build or index.html) were not found in the source!"
             exit 1
           fi
 
-          # Explicitly copy the core game build engine and templates
-          cp -r temp-repo/Build/ games/fish/Build/
-          cp -r temp-repo/TemplateData/ games/fish/TemplateData/
-          cp temp-repo/index.html games/fish/index.html
+          # Explicitly copy the core game build engine and entry file
+          cp -r temp-repo/Build/ games/christmas-massacre/Build/
+          cp temp-repo/index.html games/christmas-massacre/index.html
           
           # Clean hardcoded base elements if they exist to prevent asset loading breaks
-          if [ -f games/fish/index.html ]; then
-            sed -i '/<base href=/d' games/fish/index.html
+          if [ -f games/christmas-massacre/index.html ]; then
+            sed -i '/<base href=/d' games/christmas-massacre/index.html
           fi
           
           # Clean up temp working repository
@@ -45,8 +44,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@://github.com"
           
-          git add games/fish/
-          git commit -m "Successfully imported Fish game assets including /Build folder" || echo "No changes to commit"
+          git add games/christmas-massacre/
+          git commit -m "Successfully imported Christmas Massacre game assets" || echo "No changes to commit"
           
           # Rebase onto your main branch to sync any incoming commits
           git pull --rebase origin main

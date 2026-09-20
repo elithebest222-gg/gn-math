@@ -1,4 +1,4 @@
-name: Copy Stardew Valley Port
+name: Copy Schoolboy Runaway Port
 on:
   workflow_dispatch:
 
@@ -11,22 +11,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone Stardew WASM source repository
+      - name: Clone Schoolboy Runaway source repository
         run: |
           # Clones the main branch with minimal history depth to save bandwidth
-          git clone --depth 1 https://github.com/degloved-net/stardew-wasm temp-repo
+          git clone --depth 1 https://github.com/giorgirick2-gif/game-webports-onawebsite temp-repo
 
       - name: Move Assets to Target Location
         run: |
           # Setup destination root structure
-          mkdir -p games/stardew-valley
+          mkdir -p games/schoolboy-runaway
           
-          # Use rsync to safely migrate files while excluding git tracking records
-          rsync -av --exclude='.git' temp-repo/ games/stardew-valley/
+          # Isolate and migrate just the schoolboy-runaway subdirectory assets
+          rsync -av --exclude='.git' temp-repo/schoolboy-runaway/ games/schoolboy-runaway/
 
       - name: Remove Base Line in Index
         run: |
-          TARGET_INDEX="games/stardew-valley/index.html"
+          TARGET_INDEX="games/schoolboy-runaway/index.html"
           
           if [ -f "$TARGET_INDEX" ]; then
             # Strips out any variation of the <base href=... > tag securely
@@ -46,8 +46,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/stardew-valley/
-          git commit -m "Imported Stardew Valley WASM assets and stripped base line from index.html" || echo "No changes to commit"
+          git add games/schoolboy-runaway/
+          git commit -m "Imported Schoolboy Runaway assets and stripped base line from index.html" || echo "No changes to commit"
           
           git pull --rebase origin main
           git push origin main

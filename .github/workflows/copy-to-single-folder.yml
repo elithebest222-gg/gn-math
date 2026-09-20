@@ -13,7 +13,7 @@ jobs:
 
       - name: Clone Endacopia source repository
         run: |
-          git clone --depth 1 https://github.com temp-repo
+          git clone --depth 1 https://github.com/clever-portal/endacopia temp-repo
 
       - name: Verify and Move Game Engine Assets
         run: |

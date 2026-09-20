@@ -1,4 +1,4 @@
-name: Copy Speed Stars Port
+name: Copy DogeMiner Port
 on:
   workflow_dispatch:
 
@@ -11,21 +11,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone Speed Stars source repository
+      - name: Clone DogeMiner source repository
         run: |
-          git clone --depth 1 https://github.com/elithebest222-gg/speed-stars temp-repo
+          # Clones only the specific 'fixy' branch to save bandwidth
+          git clone --branch fixy --depth 1 https://github.com/Nailington/3kh0-assets temp-repo
 
       - name: Move Assets to Target Location
         run: |
           # Setup destination root structure
-          mkdir -p games/speed-stars
+          mkdir -p games/dogeminer
           
-          # Use rsync to safely migrate files while excluding git tracking records
-          rsync -av --exclude='.git' temp-repo/ games/speed-stars/
+          # Isolate and migrate just the DogeMiner subdirectory assets
+          rsync -av --exclude='.git' temp-repo/DogeMiner/ games/dogeminer/
 
       - name: Remove Base Line in Index
         run: |
-          TARGET_INDEX="games/speed-stars/index.html"
+          TARGET_INDEX="games/dogeminer/index.html"
           
           if [ -f "$TARGET_INDEX" ]; then
             # Strips out any variation of the <base href=... > tag securely
@@ -45,8 +46,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/speed-stars/
-          git commit -m "Imported Speed Stars assets and stripped base line from index.html" || echo "No changes to commit"
+          git add games/dogeminer/
+          git commit -m "Imported DogeMiner assets and stripped base line from index.html" || echo "No changes to commit"
           
           git pull --rebase origin main
           git push origin main

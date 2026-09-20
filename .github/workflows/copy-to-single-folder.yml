@@ -1,4 +1,4 @@
-name: Copy Speed Stars 2 Port (Fixed Sync)
+name: Copy Speed Stars 2 Port (Web Optimized)
 on:
   workflow_dispatch:
 
@@ -10,11 +10,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          lfs: true
 
       - name: Clone Speed Stars 2 source repository
         run: |
-          git clone --depth 1 https://github.com/zz98006/speed-stars2/ temp-repo
+          git clone --depth 1 https://github.com/zz98006/speed-stars2 temp-repo
 
       - name: Move Assets to Target Location
         run: |
@@ -45,28 +44,20 @@ jobs:
         run: |
           rm -rf temp-repo
 
-      - name: Commit and push changes safely with LFS tracking
+      - name: Commit and push changes safely to main
         run: |
+          # Configured with the official GitHub Actions identity credentials
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 1. Initialize and capture tracking attributes first
-          git lfs install
-          git lfs track "games/speed-stars-2/Build/*.data"
-          git lfs track "games/speed-stars-2/Build/*.wasm"
-          git lfs track "games/speed-stars-2/Build/*.bundle"
-          git lfs track "*.data"
-          git lfs track "*.wasm"
+          # Stage the new game files directly
+          git add games/speed-stars-2/
           
-          # 2. Stage the attributes tracking definitions first
-          git add .gitattributes
+          # Create the commit locally
+          git commit -m "Imported Speed Stars 2 assets directly via standard web sync" || echo "No changes to commit"
           
-          # 3. Securely pull and align remote updates before indexing game files
+          # Fetch remote changes and place our new commit cleanly at the front of the line
           git pull --rebase origin main
           
-          # 4. Stage and commit all new game assets safely
-          git add games/speed-stars-2/
-          git commit -m "Imported Speed Stars 2 assets with clean LFS integration" || echo "No changes to commit"
-          
-          # 5. Push straight to main
+          # Push the files up so they appear instantly on your GitHub Web interface
           git push origin main

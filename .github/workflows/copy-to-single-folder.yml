@@ -1,4 +1,4 @@
-name: Copy Speed Stars 2 Port (Web Optimized)
+name: Copy Schoolboy Runaway Port (Genizy Source)
 on:
   workflow_dispatch:
 
@@ -11,23 +11,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone Speed Stars 2 source repository
+      - name: Clone Genizy web-port source repository
         run: |
-          git clone --depth 1 https://github.com/zz98006/speed-stars2 temp-repo
+          # Clones the parent repository with minimal history depth to save bandwidth
+          git clone --depth 1 https://github.com/genizy/web-port temp-repo
 
       - name: Move Assets to Target Location
         run: |
-          mkdir -p games/speed-stars-2
+          # Setup destination root structure
+          mkdir -p games/schoolboy-runaway
           
-          if [ -d "temp-repo/speed-stars" ]; then
-            rsync -av --exclude='.git' temp-repo/speed-stars/ games/speed-stars-2/
+          # Isolate and migrate just the schoolboy-runaway subdirectory assets
+          if [ -d "temp-repo/schoolboy-runaway" ]; then
+            rsync -av --exclude='.git' temp-repo/schoolboy-runaway/ games/schoolboy-runaway/
           else
-            rsync -av --exclude='.git' temp-repo/ games/speed-stars-2/
+            rsync -av --exclude='.git' temp-repo/ games/schoolboy-runaway/
           fi
 
       - name: Remove Base Line in Index
         run: |
-          INDEX_FILES=$(find games/speed-stars-2 -iname "index.html")
+          INDEX_FILES=$(find games/schoolboy-runaway -iname "index.html")
           
           if [ -n "$INDEX_FILES" ]; then
             for file in $INDEX_FILES; do
@@ -36,7 +39,7 @@ jobs:
             done
             echo "Successfully completed base href sanitization."
           else
-            echo "::error::No index.html file found anywhere in games/speed-stars-2!"
+            echo "::error::No index.html file found anywhere in games/schoolboy-runaway!"
             exit 1
           fi
 
@@ -51,10 +54,10 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Stage the new game files directly
-          git add games/speed-stars-2/
+          git add games/schoolboy-runaway/
           
           # Create the commit locally
-          git commit -m "Imported Speed Stars 2 assets directly via standard web sync" || echo "No changes to commit"
+          git commit -m "Imported Schoolboy Runaway assets directly via standard web sync" || echo "No changes to commit"
           
           # Fetch remote changes and place our new commit cleanly at the front of the line
           git pull --rebase origin main

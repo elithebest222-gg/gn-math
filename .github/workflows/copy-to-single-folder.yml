@@ -1,4 +1,4 @@
-name: Copy Friday Night Funkin Port
+name: Copy Stardew Valley Port
 on:
   workflow_dispatch:
 
@@ -11,22 +11,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone Friday Night Funkin source repository
+      - name: Clone Stardew WASM source repository
         run: |
           # Clones the main branch with minimal history depth to save bandwidth
-          git clone --depth 1 https://github.com/Entraptadoeztechnology/fridayfunk temp-repo
+          git clone --depth 1 https://github.com/degloved-net/stardew-wasm temp-repo
 
       - name: Move Assets to Target Location
         run: |
           # Setup destination root structure
-          mkdir -p games/fridayfunk
+          mkdir -p games/stardew-valley
           
           # Use rsync to safely migrate files while excluding git tracking records
-          rsync -av --exclude='.git' temp-repo/ games/fridayfunk/
+          rsync -av --exclude='.git' temp-repo/ games/stardew-valley/
 
       - name: Remove Base Line in Index
         run: |
-          TARGET_INDEX="games/fridayfunk/index.html"
+          TARGET_INDEX="games/stardew-valley/index.html"
           
           if [ -f "$TARGET_INDEX" ]; then
             # Strips out any variation of the <base href=... > tag securely
@@ -46,8 +46,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/fridayfunk/
-          git commit -m "Imported Friday Night Funkin assets and stripped base line from index.html" || echo "No changes to commit"
+          git add games/stardew-valley/
+          git commit -m "Imported Stardew Valley WASM assets and stripped base line from index.html" || echo "No changes to commit"
           
           git pull --rebase origin main
           git push origin main

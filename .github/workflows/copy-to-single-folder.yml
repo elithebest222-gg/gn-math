@@ -1,4 +1,4 @@
-name: Copy DogeMiner Port
+name: Copy Friday Night Funkin Port
 on:
   workflow_dispatch:
 
@@ -11,22 +11,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone DogeMiner source repository
+      - name: Clone Friday Night Funkin source repository
         run: |
-          # Clones only the specific 'fixy' branch to save bandwidth
-          git clone --branch fixy --depth 1 https://github.com/Nailington/3kh0-assets temp-repo
+          # Clones the main branch with minimal history depth to save bandwidth
+          git clone --depth 1 https://github.com/Entraptadoeztechnology/fridayfunk temp-repo
 
       - name: Move Assets to Target Location
         run: |
           # Setup destination root structure
-          mkdir -p games/dogeminer
+          mkdir -p games/fridayfunk
           
-          # Isolate and migrate just the DogeMiner subdirectory assets
-          rsync -av --exclude='.git' temp-repo/DogeMiner/ games/dogeminer/
+          # Use rsync to safely migrate files while excluding git tracking records
+          rsync -av --exclude='.git' temp-repo/ games/fridayfunk/
 
       - name: Remove Base Line in Index
         run: |
-          TARGET_INDEX="games/dogeminer/index.html"
+          TARGET_INDEX="games/fridayfunk/index.html"
           
           if [ -f "$TARGET_INDEX" ]; then
             # Strips out any variation of the <base href=... > tag securely
@@ -46,8 +46,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/dogeminer/
-          git commit -m "Imported DogeMiner assets and stripped base line from index.html" || echo "No changes to commit"
+          git add games/fridayfunk/
+          git commit -m "Imported Friday Night Funkin assets and stripped base line from index.html" || echo "No changes to commit"
           
           git pull --rebase origin main
           git push origin main

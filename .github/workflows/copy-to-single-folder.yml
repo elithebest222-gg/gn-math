@@ -1,4 +1,4 @@
-name: Copy BuildNow GG Game
+name: Copy Endacopia Game
 on:
   workflow_dispatch:
 
@@ -11,40 +11,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone the BuildNow GG directory using sparse checkout
+      - name: Clone Endacopia source repository
         run: |
-          mkdir temp-repo && cd temp-repo
-          git init
-          git remote add origin https://github.com/genizy/cg-rip/
-          git config core.sparseCheckout true
-          
-          # Target only the buildnow-gg folder
-          echo "buildnow-gg/" >> .git/info/sparse-checkout
-          
-          git pull --depth 1 origin main
-          cd ..
+          git clone --depth 1 https://github.com temp-repo
 
-      - name: Verify and Move Assets
+      - name: Verify and Move Game Engine Assets
         run: |
-          # Create target directory
-          mkdir -p games/buildnow-gg
+          # Create target folder structure
+          mkdir -p games/endacopia
           
-          # CRITICAL CHECK: Verify core engine folder and entry index exist
-          if [ ! -d "temp-repo/buildnow-gg/Build" ] || [ ! -f "temp-repo/buildnow-gg/index.html" ]; then
-            echo "::error::Required assets (/Build or index.html) were not found in the source!"
+          # CRITICAL CHECK: Verify the key Adventure Game Studio files exist
+          if [ ! -f "temp-repo/ags.wasm" ] || [ ! -f "temp-repo/index.html" ]; then
+            echo "::error::Required AGS runtime files (ags.wasm or index.html) were not found in the source!"
             exit 1
           fi
 
-          # Recursively copy all contents (Build/, index.html, cg-sdk.js)
-          cp -r temp-repo/buildnow-gg/* games/buildnow-gg/
+          # Copy everything from the temporary folder over to the target directory
+          cp -r temp-repo/* games/endacopia/
           
-          # Clean hardcoded base elements if they exist to prevent asset loading breaks
-          if [ -f games/buildnow-gg/index.html ]; then
-            sed -i '/<base href=/d' games/buildnow-gg/index.html
-            echo "Successfully cleaned base href tags from entry index."
-          fi
+          # Remove Git metadata from the copied directory if any slipped through
+          rm -rf games/endacopia/.git
           
-          # Clean up temp working repository
+          # Clean up the temporary workspace clone
           rm -rf temp-repo
 
       - name: Commit and push changes safely
@@ -52,9 +40,9 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/buildnow-gg/
-          git commit -m "Successfully imported BuildNow GG assets including core Build engine" || echo "No changes to commit"
+          git add games/endacopia/
+          git commit -m "Successfully imported Endacopia AGS web assembly game files" || echo "No changes to commit"
           
-          # Rebase onto your main branch to sync any incoming commits
+          # Rebase onto your main branch to sync any concurrent repository modifications
           git pull --rebase origin main
           git push origin main

@@ -1,4 +1,4 @@
-name: Copy Spaceflight Simulator Game
+name: Copy BuildNow GG Game
 on:
   workflow_dispatch:
 
@@ -11,31 +11,37 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone the Spaceflight Simulator port repository
+      - name: Clone the BuildNow GG directory using sparse checkout
         run: |
-          # Shallow clone the repository to quickly download files
-          git clone --depth 1 https://github.com/web-ports/spaceflight-simulator temp-repo
+          mkdir temp-repo && cd temp-repo
+          git init
+          git remote add origin https://github.com/genizy/cg-rip/
+          git config core.sparseCheckout true
+          
+          # Target only the buildnow-gg folder
+          echo "buildnow-gg/" >> .git/info/sparse-checkout
+          
+          git pull --depth 1 origin main
+          cd ..
 
-      - name: Verify and Move Spaceflight Simulator Build Assets
+      - name: Verify and Move Assets
         run: |
           # Create target directory
-          mkdir -p games/spaceflight-simulator
+          mkdir -p games/buildnow-gg
           
-          # CRITICAL CHECK: Verify all essential folders and index.html exist
-          if [ ! -d "temp-repo/Build" ] || [ ! -d "temp-repo/TemplateData" ] || [ ! -d "temp-repo/StreamingAssets" ] || [ ! -f "temp-repo/index.html" ]; then
-            echo "::error::Required assets (/Build, /TemplateData, /StreamingAssets, or index.html) were not found in the source!"
+          # CRITICAL CHECK: Verify core engine folder and entry index exist
+          if [ ! -d "temp-repo/buildnow-gg/Build" ] || [ ! -f "temp-repo/buildnow-gg/index.html" ]; then
+            echo "::error::Required assets (/Build or index.html) were not found in the source!"
             exit 1
           fi
 
-          # Explicitly copy the core game build engine, templates, and streaming assets
-          cp -r temp-repo/Build/ games/spaceflight-simulator/Build/
-          cp -r temp-repo/TemplateData/ games/spaceflight-simulator/TemplateData/
-          cp -r temp-repo/StreamingAssets/ games/spaceflight-simulator/StreamingAssets/
-          cp temp-repo/index.html games/spaceflight-simulator/index.html
+          # Recursively copy all contents (Build/, index.html, cg-sdk.js)
+          cp -r temp-repo/buildnow-gg/* games/buildnow-gg/
           
           # Clean hardcoded base elements if they exist to prevent asset loading breaks
-          if [ -f games/spaceflight-simulator/index.html ]; then
-            sed -i '/<base href=/d' games/spaceflight-simulator/index.html
+          if [ -f games/buildnow-gg/index.html ]; then
+            sed -i '/<base href=/d' games/buildnow-gg/index.html
+            echo "Successfully cleaned base href tags from entry index."
           fi
           
           # Clean up temp working repository
@@ -46,8 +52,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/spaceflight-simulator/
-          git commit -m "Successfully imported Spaceflight Simulator assets including StreamingAssets" || echo "No changes to commit"
+          git add games/buildnow-gg/
+          git commit -m "Successfully imported BuildNow GG assets including core Build engine" || echo "No changes to commit"
           
           # Rebase onto your main branch to sync any incoming commits
           git pull --rebase origin main

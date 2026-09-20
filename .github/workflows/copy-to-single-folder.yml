@@ -1,4 +1,4 @@
-name: Copy TABS Game
+name: Copy Spaceflight Simulator Game
 on:
   workflow_dispatch:
 
@@ -11,15 +11,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone the TABS port repository
+      - name: Clone the Spaceflight Simulator port repository
         run: |
           # Shallow clone the repository to quickly download files
-          git clone --depth 1 https://github.com/web-ports/tabs temp-repo
+          git clone --depth 1 https://github.com/web-ports/spaceflight-simulator temp-repo
 
-      - name: Verify and Move TABS Build Assets
+      - name: Verify and Move Spaceflight Simulator Build Assets
         run: |
           # Create target directory
-          mkdir -p games/tabs
+          mkdir -p games/spaceflight-simulator
           
           # CRITICAL CHECK: Verify all essential folders and index.html exist
           if [ ! -d "temp-repo/Build" ] || [ ! -d "temp-repo/TemplateData" ] || [ ! -d "temp-repo/StreamingAssets" ] || [ ! -f "temp-repo/index.html" ]; then
@@ -28,14 +28,14 @@ jobs:
           fi
 
           # Explicitly copy the core game build engine, templates, and streaming assets
-          cp -r temp-repo/Build/ games/tabs/Build/
-          cp -r temp-repo/TemplateData/ games/tabs/TemplateData/
-          cp -r temp-repo/StreamingAssets/ games/tabs/StreamingAssets/
-          cp temp-repo/index.html games/tabs/index.html
+          cp -r temp-repo/Build/ games/spaceflight-simulator/Build/
+          cp -r temp-repo/TemplateData/ games/spaceflight-simulator/TemplateData/
+          cp -r temp-repo/StreamingAssets/ games/spaceflight-simulator/StreamingAssets/
+          cp temp-repo/index.html games/spaceflight-simulator/index.html
           
           # Clean hardcoded base elements if they exist to prevent asset loading breaks
-          if [ -f games/tabs/index.html ]; then
-            sed -i '/<base href=/d' games/tabs/index.html
+          if [ -f games/spaceflight-simulator/index.html ]; then
+            sed -i '/<base href=/d' games/spaceflight-simulator/index.html
           fi
           
           # Clean up temp working repository
@@ -46,8 +46,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/tabs/
-          git commit -m "Successfully imported TABS assets including StreamingAssets" || echo "No changes to commit"
+          git add games/spaceflight-simulator/
+          git commit -m "Successfully imported Spaceflight Simulator assets including StreamingAssets" || echo "No changes to commit"
           
           # Rebase onto your main branch to sync any incoming commits
           git pull --rebase origin main

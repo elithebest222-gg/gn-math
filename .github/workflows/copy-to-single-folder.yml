@@ -1,4 +1,4 @@
-name: Copy Speed Stars
+name: Copy Fish Game
 on:
   workflow_dispatch:
 
@@ -11,31 +11,43 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone only the speed-stars subfolder
+      - name: Clone the fish port repository
         run: |
-          # Use sparse-checkout parameters to download just the targeted directory
-          git clone --depth 1 --filter=blob:none --sparse https://github.com/genizy/web-port temp-repo
-          git -C temp-repo sparse-checkout set speed-stars
+          # Shallow clone the repository to quickly download files
+          git clone --depth 1 https://github.com/web-ports/fish temp-repo
 
-      - name: Move Speed Stars and clean CDN tags
+      - name: Verify and Move Fish Build Assets
         run: |
-          mkdir -p games/speed-stars
+          # Create target directory
+          mkdir -p games/fish
           
-          # Move files from the sparse subdirectory structure over
-          cp -r temp-repo/speed-stars/* games/speed-stars/
+          # CRITICAL CHECK: Verify /Build, /TemplateData and index.html all exist
+          if [ ! -d "temp-repo/Build" ] || [ ! -d "temp-repo/TemplateData" ] || [ ! -f "temp-repo/index.html" ]; then
+            echo "::error::Required files (/Build, /TemplateData, or index.html) were not found in the source!"
+            exit 1
+          fi
+
+          # Explicitly copy the core game build engine and templates
+          cp -r temp-repo/Build/ games/fish/Build/
+          cp -r temp-repo/TemplateData/ games/fish/TemplateData/
+          cp temp-repo/index.html games/fish/index.html
           
-          if [ -f games/speed-stars/index.html ]; then
-            sed -i '/<base href=/d' games/speed-stars/index.html
+          # Clean hardcoded base elements if they exist to prevent asset loading breaks
+          if [ -f games/fish/index.html ]; then
+            sed -i '/<base href=/d' games/fish/index.html
           fi
           
+          # Clean up temp working repository
           rm -rf temp-repo
 
       - name: Commit and push changes safely
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add games/speed-stars/
-          git commit -m "Successfully imported Speed Stars subfolder" || echo "No changes"
+          git config --global user.email "github-actions[bot]@://github.com"
           
+          git add games/fish/
+          git commit -m "Successfully imported Fish game assets including /Build folder" || echo "No changes to commit"
+          
+          # Rebase onto your main branch to sync any incoming commits
           git pull --rebase origin main
           git push origin main

@@ -1,4 +1,4 @@
-name: Copy Endacopia Game
+name: Copy Celeste Game
 on:
   workflow_dispatch:
 
@@ -11,26 +11,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone Endacopia source repository
+      - name: Clone Celeste source repository
         run: |
-          git clone --depth 1 https://github.com/clever-portal/endacopia temp-repo
+          git clone --depth 1 https://github.com/web-ports/celeste temp-repo
 
-      - name: Verify and Move Game Engine Assets
+      - name: Verify and Move Web Frame Assets
         run: |
-          # Create target folder structure
-          mkdir -p games/endacopia
+          # Create destination directory structure
+          mkdir -p games/celeste
           
-          # CRITICAL CHECK: Verify the key Adventure Game Studio files exist
-          if [ ! -f "temp-repo/ags.wasm" ] || [ ! -f "temp-repo/index.html" ]; then
-            echo "::error::Required AGS runtime files (ags.wasm or index.html) were not found in the source!"
+          # CRITICAL CHECK: Verify core framework and web engine dependencies exist
+          if [ ! -d "temp-repo/_framework" ] || [ ! -f "temp-repo/bundle.js" ] || [ ! -f "temp-repo/index.html" ]; then
+            echo "::error::Core compilation files (_framework/, bundle.js, or index.html) were not found in the source!"
             exit 1
           fi
 
-          # Copy everything from the temporary folder over to the target directory
-          cp -r temp-repo/* games/endacopia/
+          # Copy framework bundles, assets, styles, and web indexes
+          cp -r temp-repo/* games/celeste/
           
           # Remove Git metadata from the copied directory if any slipped through
-          rm -rf games/endacopia/.git
+          rm -rf games/celeste/.git
           
           # Clean up the temporary workspace clone
           rm -rf temp-repo
@@ -40,8 +40,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/endacopia/
-          git commit -m "Successfully imported Endacopia AGS web assembly game files" || echo "No changes to commit"
+          git add games/celeste/
+          git commit -m "Successfully imported Celeste web port framework and assets" || echo "No changes to commit"
           
           # Rebase onto your main branch to sync any concurrent repository modifications
           git pull --rebase origin main

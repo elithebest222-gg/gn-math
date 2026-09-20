@@ -1,4 +1,4 @@
-name: Copy Schoolboy Runaway Port (Alternative Source)
+name: Copy Speed Stars 2 Port
 on:
   workflow_dispatch:
 
@@ -10,26 +10,28 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          lfs: true # Keeps large file storage framework operational
+          lfs: true # Keeps large file storage layers active
 
-      - name: Clone Schoolboy Runaway source repository
+      - name: Clone Speed Stars 2 source repository
         run: |
-          # Clones this specific fork repository
-          git clone --depth 1 https://github.com/elithebest222-gg/web-port temp-repo
+          # Clones the master repository containing the nested game asset paths
+          git clone --depth 1 https://github.com/zz98006/speed-stars2 temp-repo
 
       - name: Move Assets to Target Location
         run: |
-          mkdir -p games/schoolboy-runaway
+          # Setup destination root structure
+          mkdir -p games/speed-stars-2
           
-          if [ -d "temp-repo/schoolboy-runaway" ]; then
-            rsync -av --exclude='.git' temp-repo/schoolboy-runaway/ games/schoolboy-runaway/
+          # Safely migrates files from the subfolder while stripping upstream git metadata
+          if [ -d "temp-repo/speed-stars" ]; then
+            rsync -av --exclude='.git' temp-repo/speed-stars/ games/speed-stars-2/
           else
-            rsync -av --exclude='.git' temp-repo/ games/schoolboy-runaway/
+            rsync -av --exclude='.git' temp-repo/ games/speed-stars-2/
           fi
 
       - name: Remove Base Line in Index
         run: |
-          INDEX_FILES=$(find games/schoolboy-runaway -iname "index.html")
+          INDEX_FILES=$(find games/speed-stars-2 -iname "index.html")
           
           if [ -n "$INDEX_FILES" ]; then
             for file in $INDEX_FILES; do
@@ -38,7 +40,7 @@ jobs:
             done
             echo "Successfully completed base href sanitization."
           else
-            echo "::error::No index.html file found anywhere in games/schoolboy-runaway!"
+            echo "::error::No index.html file found anywhere in games/speed-stars-2!"
             exit 1
           fi
 
@@ -51,19 +53,20 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
+          # Initialize LFS system controls inside the local runner
           git lfs install
           
-          # Guard unity binary extensions using large storage tracking rules
-          git lfs track "games/schoolboy-runaway/Build/*.data"
-          git lfs track "games/schoolboy-runaway/Build/*.wasm"
-          git lfs track "games/schoolboy-runaway/Build/*.bundle"
+          # Protect high-capacity binary files from crashing standard Git limits
+          git lfs track "games/speed-stars-2/Build/*.data"
+          git lfs track "games/speed-stars-2/Build/*.wasm"
+          git lfs track "games/speed-stars-2/Build/*.bundle"
           git lfs track "*.data"
           git lfs track "*.wasm"
           
           git add .gitattributes
-          git add games/schoolboy-runaway/
+          git add games/speed-stars-2/
           
-          git commit -m "Imported Schoolboy Runaway assets from new fork source" || echo "No changes to commit"
+          git commit -m "Imported Speed Stars 2 assets with robust LFS tracking rules" || echo "No changes to commit"
           
           git pull --rebase origin main
           git push origin main

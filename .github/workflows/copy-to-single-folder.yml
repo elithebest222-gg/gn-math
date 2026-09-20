@@ -1,4 +1,4 @@
-name: Copy 60 Seconds Web Port
+name: Copy Web Dashers Port
 on:
   workflow_dispatch:
 
@@ -11,40 +11,62 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone 60 Seconds source repository
-        run: |
-          git clone --depth 1 https://github.com/usheje883-maker/60-Seconds-Webport temp-repo
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Verify and Move Unity WebGL Assets
+      - name: Clone Web Dashers source repository
         run: |
-          # Create destination directory structure
-          mkdir -p games/60-seconds
-          
-          # CRITICAL CHECK: Verify Unity WebGL core compilation directories exist
-          if [ ! -d "temp-repo/Build" ] || [ ! -d "temp-repo/TemplateData" ] || [ ! -f "temp-repo/index.html" ]; then
-            echo "::error::Core Unity compilation assets (Build/, TemplateData/, or index.html) were not found in the source!"
+          git clone --depth 1 https://github.com/elithebest222-gg/web-dashers/ temp-repo
+
+      - name: Verify, Install, and Build Project
+        run: |
+          # CRITICAL CHECK: Verify source configuration file exists
+          if [ ! -f "temp-repo/package.json" ]; then
+            echo "::error::package.json configuration file missing from source repository!"
             exit 1
           fi
 
-          # Copy Unity WebGL build folders, streaming assets, and web layout indexes
-          cp -r temp-repo/* games/60-seconds/
+          # Change to source directory to run npm workflows
+          cd temp-repo
           
-          # Remove Git metadata from the copied directory if any slipped through
-          rm -rf games/60-seconds/.git
+          # Install development and production dependencies
+          npm ci || npm install
           
-          # Clean up the temporary workspace clone
+          # Execute the production compilation script
+          npm run build --if-present
+
+      - name: Move Compiled Assets to Target
+        run: |
+          # Create deployment destination directory structure
+          mkdir -p games/web-dashers
+          
+          # Check for common build output directories (dist, build) or fallback to root if static
+          if [ -d "temp-repo/dist" ]; then
+            cp -r temp-repo/dist/* games/web-dashers/
+          elif [ -d "temp-repo/build" ]; then
+            cp -r temp-repo/build/* games/web-dashers/
+          else
+            echo "::warning::No dedicated build bundle folder found; copying root static assets instead."
+            cp -r temp-repo/* games/web-dashers/
+            rm -rf games/web-dashers/node_modules
+          fi
+          
+          # Clean up workspace metadata and temp directories
+          rm -rf games/web-dashers/.git
           rm -rf temp-repo
 
       - name: Remove Base Line in Index
         run: |
-          TARGET_INDEX="games/60-seconds/index.html"
+          TARGET_INDEX="games/web-dashers/index.html"
           
           # Remove any line containing the <base href... tag completely
           if [ -f "$TARGET_INDEX" ]; then
             sed -i '/<base href=/d' "$TARGET_INDEX"
             echo "Successfully removed base href tags from $TARGET_INDEX"
           else
-            echo "::warning::index.html not found, skipping base tag removal."
+            echo "::warning::index.html not found at $TARGET_INDEX, skipping base tag removal."
           fi
 
       - name: Commit and push changes safely
@@ -52,9 +74,9 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@://github.com"
           
-          git add games/60-seconds/
-          git commit -m "Imported 60 Seconds web port and stripped base line from index.html" || echo "No changes to commit"
+          git add games/web-dashers/
+          git commit -m "Imported Web Dashers distribution assets and stripped base line from index.html" || echo "No changes to commit"
           
-          # Rebase onto your main branch to sync any concurrent repository modifications
+          # Rebase onto your main branch to sync concurrent workspace adjustments
           git pull --rebase origin main
           git push origin main

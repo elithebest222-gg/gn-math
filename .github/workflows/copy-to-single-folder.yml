@@ -10,30 +10,34 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          lfs: true # Ensures LFS operational layers are active in workspace
 
       - name: Clone Schoolboy Runaway source repository
         run: |
-          # Clones the main branch with minimal history depth to save bandwidth
           git clone --depth 1 https://github.com/giorgirick2-gif/game-webports-onawebsite temp-repo
 
       - name: Move Assets to Target Location
         run: |
-          # Setup destination root structure
           mkdir -p games/schoolboy-runaway
           
-          # Isolate and migrate just the schoolboy-runaway subdirectory assets
-          rsync -av --exclude='.git' temp-repo/schoolboy-runaway/ games/schoolboy-runaway/
+          if [ -d "temp-repo/schoolboy-runaway" ]; then
+            rsync -av --exclude='.git' temp-repo/schoolboy-runaway/ games/schoolboy-runaway/
+          else
+            rsync -av --exclude='.git' temp-repo/ games/schoolboy-runaway/
+          fi
 
       - name: Remove Base Line in Index
         run: |
-          TARGET_INDEX="games/schoolboy-runaway/index.html"
+          INDEX_FILES=$(find games/schoolboy-runaway -iname "index.html")
           
-          if [ -f "$TARGET_INDEX" ]; then
-            # Strips out any variation of the <base href=... > tag securely
-            sed -i '/<base href=/d' "$TARGET_INDEX"
-            echo "Successfully removed base href tags from $TARGET_INDEX"
+          if [ -n "$INDEX_FILES" ]; then
+            for file in $INDEX_FILES; do
+              echo "Processing base href removal for: $file"
+              sed -i '/<base href=/d' "$file"
+            done
+            echo "Successfully completed base href sanitization."
           else
-            echo "::error::index.html not found at $TARGET_INDEX! Verify target repository structure."
+            echo "::error::No index.html file found anywhere in games/schoolboy-runaway!"
             exit 1
           fi
 
@@ -41,13 +45,29 @@ jobs:
         run: |
           rm -rf temp-repo
 
-      - name: Commit and push changes safely
+      - name: Commit and push changes safely with LFS tracking
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/schoolboy-runaway/
-          git commit -m "Imported Schoolboy Runaway assets and stripped base line from index.html" || echo "No changes to commit"
+          # Initialize Git LFS inside the runner local environment
+          git lfs install
           
+          # Track large compiled Unity binary files through LFS pointers
+          git lfs track "games/schoolboy-runaway/Build/*.data"
+          git lfs track "games/schoolboy-runaway/Build/*.wasm"
+          git lfs track "games/schoolboy-runaway/Build/*.bundle"
+          git lfs track "*.data"
+          git lfs track "*.wasm"
+          
+          # Force save the tracking configuration rules (.gitattributes)
+          git add .gitattributes
+          
+          # Index the rest of the game files
+          git add games/schoolboy-runaway/
+          
+          git commit -m "Imported Schoolboy Runaway assets with active LFS file tracking" || echo "No changes to commit"
+          
+          # Synchronize and push changes up to GitHub remote streams
           git pull --rebase origin main
           git push origin main

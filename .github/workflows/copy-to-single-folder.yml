@@ -1,4 +1,4 @@
-name: Copy Clover Pit Game
+name: Copy Needy Streamer Overload Game
 on:
   workflow_dispatch:
 
@@ -11,30 +11,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone the Clover Pit port repository
+      - name: Clone the Needy Streamer Overload port repository
         run: |
           # Shallow clone the repository to quickly download files
-          git clone --depth 1 https://github.com/web-ports/clover-pit temp-repo
+          git clone --depth 1 https://github.com/web-ports/needy-streamer-overload temp-repo
 
-      - name: Verify and Move Clover Pit Build Assets
+      - name: Verify and Move Needy Streamer Overload Build Assets
         run: |
           # Create target directory
-          mkdir -p games/clover-pit
+          mkdir -p games/needy-streamer-overload
           
-          # CRITICAL CHECK: Verify /Build, /TemplateData and index.html all exist
-          if [ ! -d "temp-repo/Build" ] || [ ! -d "temp-repo/TemplateData" ] || [ ! -f "temp-repo/index.html" ]; then
-            echo "::error::Required files (/Build, /TemplateData, or index.html) were not found in the source!"
+          # CRITICAL CHECK: Verify all essential folders and index.html exist
+          if [ ! -d "temp-repo/Build" ] || [ ! -d "temp-repo/TemplateData" ] || [ ! -d "temp-repo/StreamingAssets" ] || [ ! -f "temp-repo/index.html" ]; then
+            echo "::error::Required assets (/Build, /TemplateData, /StreamingAssets, or index.html) were not found in the source!"
             exit 1
           fi
 
-          # Explicitly copy the core game build engine and templates
-          cp -r temp-repo/Build/ games/clover-pit/Build/
-          cp -r temp-repo/TemplateData/ games/clover-pit/TemplateData/
-          cp temp-repo/index.html games/clover-pit/index.html
+          # Explicitly copy the core game build engine, templates, and streaming assets
+          cp -r temp-repo/Build/ games/needy-streamer-overload/Build/
+          cp -r temp-repo/TemplateData/ games/needy-streamer-overload/TemplateData/
+          cp -r temp-repo/StreamingAssets/ games/needy-streamer-overload/StreamingAssets/
+          cp temp-repo/index.html games/needy-streamer-overload/index.html
           
           # Clean hardcoded base elements if they exist to prevent asset loading breaks
-          if [ -f games/clover-pit/index.html ]; then
-            sed -i '/<base href=/d' games/clover-pit/index.html
+          if [ -f games/needy-streamer-overload/index.html ]; then
+            sed -i '/<base href=/d' games/needy-streamer-overload/index.html
           fi
           
           # Clean up temp working repository
@@ -45,8 +46,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add games/clover-pit/
-          git commit -m "Successfully imported Clover Pit game assets" || echo "No changes to commit"
+          git add games/needy-streamer-overload/
+          git commit -m "Successfully imported Needy Streamer Overload assets including StreamingAssets" || echo "No changes to commit"
           
           # Rebase onto your main branch to sync any incoming commits
           git pull --rebase origin main

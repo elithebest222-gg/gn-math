@@ -3,210 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> GN-MATH </title>
+    <title>Geography - Truffled</title>
     <style>
         :root {
-            --bg-color: #0f0f12;
-            --card-color: #16161e;
-            --accent-color: #7aa2f7;
-            --text-color: #a9b1d6;
-            --text-bright: #c0caf5;
+            --bg-color: #0b0c10;
+            --card-bg: #1f2833;
+            --text-color: #c5a059;
+            --text-muted: #8b949e;
+            --accent-color: #66fcf1;
+            --tag-bg: #2d3748;
         }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         header {
-            max-width: 1200px;
-            margin: 40px auto 20px auto;
             text-align: center;
-        }
-
-        h1 {
-            color: var(--text-bright);
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .search-container {
-            margin: 20px auto;
-            max-width: 500px;
-        }
-
-        #searchBar {
-            width: 100%;
-            padding: 12px 20px;
-            background-color: var(--card-color);
-            border: 2px solid #2ac3de;
-            border-radius: 8px;
-            color: var(--text-bright);
-            font-size: 1rem;
-            outline: none;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
-        }
-
-        #searchBar:focus {
-            border-color: var(--accent-color);
-        }
-
-        .tabs {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
             margin-bottom: 40px;
         }
 
-        .tab-btn {
-            background-color: var(--card-color);
+        h1 {
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .filter-nav {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .filter-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--text-color);
             color: var(--text-color);
-            border: 1px solid #24283b;
             padding: 8px 16px;
             border-radius: 20px;
             cursor: pointer;
+            font-size: 0.9rem;
+            text-transform: lowercase;
             transition: all 0.2s ease;
         }
 
-        .tab-btn.active, .tab-btn:hover {
-            background-color: var(--accent-color);
+        .filter-btn.active, .filter-btn:hover {
+            background: var(--text-color);
             color: var(--bg-color);
-            font-weight: bold;
         }
 
-        .game-grid {
+        /* Game Grid Layout */
+        .games-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 25px;
+            width: 100%;
             max-width: 1200px;
-            margin: 0 auto;
+            padding: 20px 0;
         }
 
+        /* Game Cards */
         .game-card {
-            background-color: var(--card-color);
+            background-color: var(--card-bg);
             border-radius: 12px;
             overflow: hidden;
-            border: 1px solid #24283b;
-            transition: transform 0.2s, box-shadow 0.2s;
             text-decoration: none;
             color: inherit;
             display: flex;
             flex-direction: column;
+            border: 1px solid transparent;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         .game-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            border-color: var(--accent-color);
+            border-color: var(--text-color);
+            box-shadow: 0 8px 20px rgba(197, 160, 89, 0.15);
         }
 
-        .game-thumbnail {
+        .thumbnail-container {
             width: 100%;
-            height: 130px;
-            background-color: #24283b;
+            aspect-ratio: 16/10;
+            background: #121821;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.5rem;
+            position: relative;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            overflow: hidden;
+        }
+
+        .thumbnail-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .game-card:hover .thumbnail-container img {
+            transform: scale(1.05);
+        }
+
+        .thumbnail-fallback {
+            position: absolute;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 10px;
+            z-index: 1;
         }
 
         .game-info {
             padding: 15px;
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            background: var(--card-bg);
+            z-index: 2;
         }
 
         .game-title {
-            color: var(--text-bright);
-            font-weight: 600;
-            margin: 0 0 5px 0;
             font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .game-category {
-            font-size: 0.8rem;
+        .game-meta {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .game-tag {
+            background: var(--tag-bg);
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 4px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #565f89;
+        }
+
+        .loading-status {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            padding: 40px;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>GN-Math</h1>
-        <p>Explore resources, tools, and interactive math features.</p>
-        
-        <div class="search-container">
-            <input type="text" id="searchBar" placeholder="Search items..." onkeyup="filterGames()">
-        </div>
-
-        <div class="tabs">
-            <button class="tab-btn active" onclick="filterCategory('all', this)">All</button>
-            <button class="tab-btn" onclick="filterCategory('math', this)">Math</button>
-            <button class="tab-btn" onclick="filterCategory('tools', this)">Tools</button>
+        <h1>Geography - Truffled</h1>
+        <div class="filter-nav">
+            <button class="filter-btn active">all</button>
+            <button class="filter-btn">games</button>
+            <button class="filter-btn">proxied games</button>
         </div>
     </header>
 
-    <main class="game-grid" id="gameGrid">
-        
-        <!-- Game Item 1 -->
-        <a href="games/drive-mad/index.html" class="game-card" data-category="math">
-            <div class="game-thumbnail">🚗</div>
-            <div class="game-info">
-                <div class="game-title">Drive Mad</div>
-                <div class="game-category">Math</div>
-            </div>
-        </a>
-
-        <!-- Game Item 2 -->
-        <a href="games/calculators/index.html" class="game-card" data-category="tools">
-            <div class="game-thumbnail">🧮</div>
-            <div class="game-info">
-                <div class="game-title">Matrix Solver</div>
-                <div class="game-category">Tools</div>
-            </div>
-        </a>
-
-        <!-- Add more blocks down here using the exact same format -->
-
+    <main class="games-grid" id="gamesGrid">
+        <div class="loading-status" id="loadingStatus">Loading games...</div>
     </main>
 
     <script>
-        let currentCategory = 'all';
+        // ADD YOUR NEW GAME FOLDER NAMES TO THIS ARRAY
+        const gameFolders = [
+            "fish",
+            "christmas-massacre",
+            "clover-pit",
+            "needy-streamer-overload",
+            "tabs",
+            "spaceflight-simulator"
+        ];
 
-        function filterGames() {
-            let input = document.getElementById('searchBar').value.toLowerCase();
-            let cards = document.getElementsByClassName('game-card');
-
-            for (let card of cards) {
-                let title = card.querySelector('.game-title').innerText.toLowerCase();
-                let category = card.getAttribute('data-category');
-                
-                let matchesSearch = title.includes(input);
-                let matchesCategory = (currentCategory === 'all' || category === currentCategory);
-
-                if (matchesSearch && matchesCategory) {
-                    card.style.display = "flex";
-                } else {
-                    card.style.display = "none";
-                }
-            }
+        // Clean names up for readable text and clean image search queries
+        function formatGameTitle(slug) {
+            if (slug === 'tabs') return 'Totally Accurate Battle Simulator';
+            return slug
+                .split('-')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
         }
 
-        function filterCategory(category, button) {
-            currentCategory = category;
+        function loadGames() {
+            const grid = document.getElementById('gamesGrid');
+            const status = document.getElementById('loadingStatus');
             
-            // Handle active tab button styles
-            let buttons = document.getElementsByClassName('tab-btn');
-            for(let btn of buttons) { btn.classList.remove('active'); }
-            button.classList.add('active');
+            if (status) status.remove();
 
-            filterGames(); // Re-run search matching logic with category constraint
+            if (gameFolders.length === 0) {
+                grid.innerHTML = '<div class="loading-status">No games found.</div>';
+                return;
+            }
+
+            gameFolders.forEach(folder => {
+                const cleanTitle = formatGameTitle(folder);
+                const gamePath = `games/${folder}/index.html`;
+                
+                // Encode title to safely use it inside the automated image search URL
+                const searchName = encodeURIComponent(cleanTitle);
+                const autoCoverUrl = `https://weserv.nl{searchName}`;
+
+                const card = document.createElement('a');
+                card.href = gamePath;
+                card.className = 'game-card';
+
+                // Setting up layout with an image loader that updates dynamically based on the game folder
+                card.innerHTML = `
+                    <div class="thumbnail-container">
+                        <div class="thumbnail-fallback">${cleanTitle}</div>
+                        <img src="https://screenshotmachine.com{window.location.origin}/games/${folder}/index.html&dimension=1024x768" 
+                             onerror="this.src='https://microlink.io{searchName}&embed=screenshot.url&overlay.browser=dark'"
+                             alt="${cleanTitle} Cover Art" 
+                             style="position: relative; z-index: 2;">
+                    </div>
+                    <div class="game-info">
+                        <h2 class="game-title">${cleanTitle}</h2>
+                        <div class="game-meta">
+                            <span class="game-tag">game</span>
+                        </div>
+                    </div>
+                `;
+
+                // If specialized live snapshot engines fail or take time to populate, use a reliable backup layout
+                const imgElement = card.querySelector('img');
+                imgElement.onerror = function() {
+                    this.src = `https://unsplash.com`;
+                };
+
+                grid.appendChild(card);
+            });
         }
+
+        window.addEventListener('DOMContentLoaded', loadGames);
     </script>
 </body>
 </html>

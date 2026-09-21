@@ -1,4 +1,4 @@
-name: Copy Peak Port
+name: Copy Scary Port (Verified Source)
 on:
   workflow_dispatch:
 
@@ -11,22 +11,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone Peak Port source repository
+      - name: Clone IDK source repository
         run: |
-          # Clones the main branch with minimal history depth to save bandwidth
-          git clone --depth 1 https://github.com/wasmdotrip/Peak-Port temp-repo
+          # Clones the parent repository with minimal history depth to save bandwidth
+          git clone --depth 1 https://github.com/shayderrr/idk temp-repo
 
       - name: Move Assets to Target Location
         run: |
           # Setup destination root structure
-          mkdir -p games/peak
+          mkdir -p games/scary
           
-          # Safely migrates files from the root while stripping upstream git metadata
-          rsync -av --exclude='.git' temp-repo/ games/peak/
+          # Isolate and migrate just the verified 'scary' subdirectory assets
+          if [ -d "temp-repo/scary" ]; then
+            rsync -av --exclude='.git' temp-repo/scary/ games/scary/
+          else
+            rsync -av --exclude='.git' temp-repo/ games/scary/
+          fi
 
       - name: Remove Base Line in Index
         run: |
-          INDEX_FILES=$(find games/peak -iname "index.html")
+          INDEX_FILES=$(find games/scary -iname "index.html")
           
           if [ -n "$INDEX_FILES" ]; then
             for file in $INDEX_FILES; do
@@ -35,7 +39,7 @@ jobs:
             done
             echo "Successfully completed base href sanitization."
           else
-            echo "::error::No index.html file found anywhere in games/peak!"
+            echo "::error::No index.html file found anywhere in games/scary!"
             exit 1
           fi
 
@@ -50,10 +54,10 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Stage the new game files directly
-          git add games/peak/
+          git add games/scary/
           
           # Create the commit locally
-          git commit -m "Imported Peak web assets directly via standard web sync" || echo "No changes to commit"
+          git commit -m "Imported Scary web assets directly via standard web sync" || echo "No changes to commit"
           
           # Fetch remote changes and place our new commit cleanly at the front of the line
           git pull --rebase origin main

@@ -1,4 +1,4 @@
-name: Copy Scary Port (Verified Source)
+name: Copy Pikuniku Port
 on:
   workflow_dispatch:
 
@@ -11,35 +11,37 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone IDK source repository
+      - name: Clone Pikuniku source repository
         run: |
-          # Clones the parent repository with minimal history depth to save bandwidth
-          git clone --depth 1 https://github.com/shayderrr/idk temp-repo
+          # Clones the pikuniku web port repository with minimal history depth
+          git clone --depth 1 https://github.com/larpinguser/pikuniku temp-repo
 
       - name: Move Assets to Target Location
         run: |
           # Setup destination root structure
-          mkdir -p games/scary
+          mkdir -p games/pikuniku
           
-          # Isolate and migrate just the verified 'scary' subdirectory assets
-          if [ -d "temp-repo/scary" ]; then
-            rsync -av --exclude='.git' temp-repo/scary/ games/scary/
+          # Migrates the core assets directly into the target game folder
+          if [ -d "temp-repo" ]; then
+            rsync -av --exclude='.git' temp-repo/ games/pikuniku/
           else
-            rsync -av --exclude='.git' temp-repo/ games/scary/
+            echo "::error::Source repository folder temp-repo not found!"
+            exit 1
           fi
 
-      - name: Remove Base Line in Index
+      - name: Remove Base Line in Index (Case Insensitive)
         run: |
-          INDEX_FILES=$(find games/scary -iname "index.html")
+          INDEX_FILES=$(find games/pikuniku -iname "index.html")
           
           if [ -n "$INDEX_FILES" ]; then
             for file in $INDEX_FILES; do
               echo "Processing base href removal for: $file"
-              sed -i '/<base href=/d' "$file"
+              # Strips out any case variation of the base href tag
+              sed -i '/<base href=/Id' "$file"
             done
             echo "Successfully completed base href sanitization."
           else
-            echo "::error::No index.html file found anywhere in games/scary!"
+            echo "::error::No index.html file found anywhere in games/pikuniku!"
             exit 1
           fi
 
@@ -54,13 +56,13 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Stage the new game files directly
-          git add games/scary/
+          git add games/pikuniku/
           
           # Create the commit locally
-          git commit -m "Imported Scary web assets directly via standard web sync" || echo "No changes to commit"
+          git commit -m "Imported Pikuniku web assets directly via standard web sync" || echo "No changes to commit"
           
           # Fetch remote changes and place our new commit cleanly at the front of the line
           git pull --rebase origin main
           
-          # Push the files up so they appear instantly on your GitHub Web interface
+          # Push the files up to update your repository
           git push origin main

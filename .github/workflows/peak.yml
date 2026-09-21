@@ -1,4 +1,4 @@
-      - name: Debug folder sizes
+      name: Debug folder sizes
         run: |
           echo "=== Top level sizes ==="
           du -h --max-depth=1 . | sort -h

@@ -1,4 +1,4 @@
-name: Copy Crazy Cattle 3D Port
+name: Copy Clustertruck Port
 on:
   workflow_dispatch:
 
@@ -11,22 +11,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clone Crazy Cattle 3D source repository
+      - name: Clone Clustertruck Port source repository
         run: |
           # Clones the main branch with minimal history depth to save bandwidth
-          git clone --depth 1 https://github.com/genizy/cc3d-mobile temp-repo
+          git clone --depth 1 https://github.com/wasmdotrip/Clustertruck-Port temp-repo
 
       - name: Move Assets to Target Location
         run: |
           # Setup destination root structure
-          mkdir -p games/crazy-cattle-3d
+          mkdir -p games/clustertruck
           
           # Safely migrates files from the root while stripping upstream git metadata
-          rsync -av --exclude='.git' temp-repo/ games/crazy-cattle-3d/
+          rsync -av --exclude='.git' temp-repo/ games/clustertruck/
 
       - name: Remove Base Line in Index
         run: |
-          INDEX_FILES=$(find games/crazy-cattle-3d -iname "index.html")
+          INDEX_FILES=$(find games/clustertruck -iname "index.html")
           
           if [ -n "$INDEX_FILES" ]; then
             for file in $INDEX_FILES; do
@@ -35,7 +35,7 @@ jobs:
             done
             echo "Successfully completed base href sanitization."
           else
-            echo "::error::No index.html file found anywhere in games/crazy-cattle-3d!"
+            echo "::error::No index.html file found anywhere in games/clustertruck!"
             exit 1
           fi
 
@@ -50,10 +50,10 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Stage the new game files directly
-          git add games/crazy-cattle-3d/
+          git add games/clustertruck/
           
           # Create the commit locally
-          git commit -m "Imported Crazy Cattle 3D web assets directly via standard web sync" || echo "No changes to commit"
+          git commit -m "Imported Clustertruck web assets directly via standard web sync" || echo "No changes to commit"
           
           # Fetch remote changes and place our new commit cleanly at the front of the line
           git pull --rebase origin main

@@ -1,13 +1,10 @@
-      name: Debug folder sizes
-        run: |
-          echo "=== Top level sizes ==="
-          du -h --max-depth=1 . | sort -h
-          
-          echo "=== Inspecting build output directory ==="
-          # Replace './dist' with your actual build/public directory
-          du -h --max-depth=2 ./dist | sort -h 
+name: Deploy to GitHub Pages
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './dist'
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write

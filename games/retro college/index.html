@@ -5,6 +5,69 @@
 
 
 <head>
+    <!-- AUTOMATED 5-MINUTE STORAGE INTERCEPTOR -->
+    <script>
+        (function() {
+            // Create a virtual cache in memory, initialized with existing permanent saves
+            const virtualStorage = {};
+            try {
+                for (let i = 0; i < window.localStorage.length; i++) {
+                    const key = window.localStorage.key(i);
+                    virtualStorage[key] = window.localStorage.getItem(key);
+                }
+            } catch (e) {
+                console.error("Failed to initialize virtual storage", e);
+            }
+
+            // Keep a reference to the original browser storage functions
+            const originalGetItem = window.localStorage.getItem.bind(window.localStorage);
+            const originalSetItem = window.localStorage.setItem.bind(window.localStorage);
+            const originalRemoveItem = window.localStorage.removeItem.bind(window.localStorage);
+            const originalClear = window.localStorage.clear.bind(window.localStorage);
+
+            // Override localStorage methods so the game only talks to our temporary memory cache
+            Object.defineProperty(window, 'localStorage', {
+                value: {
+                    get length() { return Object.keys(virtualStorage).length; },
+                    key: function(index) { return Object.keys(virtualStorage)[index] || null; },
+                    getItem: function(key) {
+                        return virtualStorage.hasOwnProperty(key) ? virtualStorage[key] : null;
+                    },
+                    setItem: function(key, value) {
+                        virtualStorage[key] = String(value); // Game saves instantly to RAM!
+                    },
+                    removeItem: function(key) {
+                        delete virtualStorage[key];
+                    },
+                    clear: function() {
+                        for (const key in virtualStorage) delete virtualStorage[key];
+                    }
+                },
+                writable: false,
+                configurable: true
+            });
+
+            // Automated commit function
+            function autoCommitSave() {
+                try {
+                    originalClear(); // Clear old permanent saves
+                    for (const key in virtualStorage) {
+                        originalSetItem(key, virtualStorage[key]); // Commit current RAM state
+                    }
+                    console.log("⏰ [Auto-Save] Progress successfully saved to browser storage.");
+                } catch (e) {
+                    console.error("Failed to auto-save to browser storage.", e);
+                }
+            }
+
+            // Start the interval timer: 5 minutes = 300,000 milliseconds
+            setInterval(autoCommitSave, 300000);
+            
+            // Optional: Also save right before the player closes or reloads the tab
+            window.addEventListener('beforeunload', autoCommitSave);
+        })();
+    </script>
+
     <script src="/js/all.js"></script>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -29,6 +92,7 @@
             margin: 0px;
             padding: 0px;
             border: 0px;
+            overflow: hidden;
         }
 
         canvas {
@@ -148,9 +212,6 @@
         })();
     </script>
     <!-- Poki end -->
-
-    <!-- Builtin injector for injecting google analytics code -->
-
 
 </body>
 

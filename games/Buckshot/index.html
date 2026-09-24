@@ -3,8 +3,11 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no">
-	<title>Buckshot Roulette (Split Asset Loader)</title>
+	<title>Buckshot Roulette (GitHub Pages Split Loader)</title>
+	
+	<!-- Coi Service Worker handles the mandatory SharedArrayBuffer isolation on GitHub -->
 	<script src="coi-serviceworker.js"></script>
+
 	<style>
 		body { touch-action: none; margin: 0; padding: 0; background-color: black; text-align: center; }
 		#canvas { display: block; margin: 0 auto; color: white; }
@@ -17,67 +20,76 @@
 <body>
 	<canvas id="canvas">Your browser does not support the canvas tag.</canvas>
 	<div id="status">
-		<div id="status-text">Downloading split game files (0/39)...</div>
-		<div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+		<div id="status-text">Downloading GitHub Fragments (0/39)...</div>
+		<div class="progress-bar"><div id="progress-value" class="progress-fill"></div></div>
 	</div>
 
+	<!-- Step 1: Load the main Godot engine orchestration wrapper script -->
 	<script src="GlitchesBuckshot-W-MPsupport.js"></script>
+	
 	<script>
-		// Helper function to sequentially download and merge split chunks into a single Blob URL
-		async function fetchAndMergeParts(baseName, totalParts, paddingLength) {
-			const chunks = [];
+		// Helper function to sequentially grab fragments and return a single unified Blob URL
+		async function fetchAndAssembleBlob(baseName, totalParts, paddingLength, mimeType) {
+			const partBlobs = [];
+			
 			for (let i = 1; i <= totalParts; i++) {
-				// Formats number to match filenames (e.g., "01" instead of "1")
 				const partNum = String(i).padStart(paddingLength, '0');
 				const url = `${baseName}.part${partNum}`;
 				
-				document.getElementById('status-text').textContent = `Fetching: ${url}`;
+				document.getElementById('status-text').textContent = `Assembling: ${url}`;
 				const response = await fetch(url);
-				if (!response.ok) throw new Error(`Failed to download ${url}`);
+				if (!response.ok) throw new Error(`Missing project fragment: ${url}`);
 				
-				const blob = await response.blob();
-				chunks.push(blob);
+				const blobData = await response.blob();
+				partBlobs.push(blobData);
 				
-				// Global progress tracker update
-				window.totalDownloadedParts++;
-				const percent = Math.floor((window.totalDownloadedParts / 39) * 100);
-				document.getElementById('progress-fill').style.width = `${percent}%`;
+				// Keep track of total progress bar allocation
+				window.fragmentsLoaded++;
+				const percent = Math.floor((window.fragmentsLoaded / 39) * 100);
+				document.getElementById('progress-value').style.width = `${percent}%`;
 			}
-			return URL.createObjectURL(new Blob(chunks, { type: "application/octet-stream" }));
+			
+			// Combine the small blobs into a single massive browser-RAM Object URL
+			return URL.createObjectURL(new Blob(partBlobs, { type: mimeType }));
 		}
 
-		async function initGame() {
-			window.totalDownloadedParts = 0;
+		async function launchGitHubBuild() {
+			window.fragmentsLoaded = 0;
 			try {
-				// 1. Download and reconstruct the split PCK (37 parts)
-				const mergedPckUrl = await fetchAndMergeParts('GlitchesBuckshot-W-MPsupport.pck', 37, 2);
-				
-				// 2. Download and reconstruct the split WASM (2 parts)
-				const mergedWasmUrl = await fetchAndMergeParts('GlitchesBuckshot-W-MPsupport.wasm', 2, 1);
+				// 1. Gather the 37 PCK parts and 2 WASM parts sequentially from GitHub
+				const solidPckBlobUrl = await fetchAndAssembleBlob('GlitchesBuckshot-W-MPsupport.pck', 37, 2, 'application/octet-stream');
+				const solidWasmBlobUrl = await fetchAndAssembleBlob('GlitchesBuckshot-W-MPsupport.wasm', 2, 1, 'application/wasm');
 
-				document.getElementById('status-text').textContent = "Initializing Game Engine...";
+				document.getElementById('status-text').textContent = `Spawning Game Canvas...`;
 
-				// 3. Configure Godot to pull from our browser-assembled memory URLs
+				// 2. Set up the Configuration mapping to direct Godot straight to our combined local storage paths
 				const GODOT_CONFIG = {
 					"args": [],
 					"canvasResizePolicy": 2,
-					"executable": mergedWasmUrl, 
-					"mainPack": mergedPckUrl,
+					"executable": solidWasmBlobUrl, // Feeds the combined virtual file link straight to engine compilation
+					"mainPack": solidPckBlobUrl,    // Feeds the combined asset bundle path cleanly
 					"fileSizes": {}
 				};
 
+				// 3. Initiate the engine sequence 
 				const engine = new Engine(GODOT_CONFIG);
-				await engine.startGame();
-				document.getElementById('status').style.display = 'none';
+				
+				// Start the game!
+				engine.startGame().then(() => {
+					document.getElementById('status').style.display = 'none';
+				}).catch((err) => {
+					document.getElementById('status-text').textContent = "Initialization failed inside the canvas layer.";
+					console.error(err);
+				});
 
-			} catch (error) {
-				document.getElementById('status-text').textContent = "Failed to load split assets.";
-				console.error(error);
+			} catch (err) {
+				document.getElementById('status-text').textContent = "Failed to synchronize server components.";
+				console.error(err);
 			}
 		}
 
-		// Fire loader once the window is active
-		window.addEventListener('load', initGame);
+		// Fire loader once the window environment has fully registered the script frameworks
+		window.addEventListener('load', launchGitHubBuild);
 	</script>
 </body>
 </html>

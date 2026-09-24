@@ -3,84 +3,81 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no">
-	<title>Buckshot Roulette Multiplayer</title>
-	
-	<!-- 1. Fix Cross-Origin Isolation Headers via Service Worker -->
+	<title>Buckshot Roulette (Split Asset Loader)</title>
 	<script src="coi-serviceworker.js"></script>
-
 	<style>
-		body {
-			touch-action: none;
-			margin: 0;
-			border: 0 none;
-			padding: 0;
-			text-align: center;
-			background-color: black;
-		}
-		#canvas {
-			display: block;
-			margin: 0 auto;
-			color: white;
-		}
-		#canvas:focus {
-			outline: none;
-		}
-		#status {
-			left: 0;
-			top: 0;
-			right: 0;
-			bottom: 0;
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			position: absolute;
-			color: #f5f5f5;
-			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-		}
+		body { touch-action: none; margin: 0; padding: 0; background-color: black; text-align: center; }
+		#canvas { display: block; margin: 0 auto; color: white; }
+		#canvas:focus { outline: none; }
+		#status { position: absolute; left:0; top:0; right:0; bottom:0; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #f5f5f5; font-family: sans-serif; }
+		.progress-bar { width: 300px; height: 10px; background-color: #333; margin-top: 10px; border-radius: 5px; overflow: hidden; }
+		.progress-fill { width: 0%; height: 100%; background-color: #ff4500; transition: width 0.1s; }
 	</style>
 </head>
 <body>
-	<canvas id="canvas">
-		Your browser does not support the canvas tag.
-	</canvas>
-	<div id="status">Preparing game assets...</div>
+	<canvas id="canvas">Your browser does not support the canvas tag.</canvas>
+	<div id="status">
+		<div id="status-text">Downloading split game files (0/39)...</div>
+		<div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+	</div>
 
-	<!-- Load the Godot engine JavaScript wrapper -->
 	<script src="GlitchesBuckshot-W-MPsupport.js"></script>
-	
 	<script>
-		// 2. Fix paths pointing explicitly to your custom-named game files
-		const GODOT_CONFIG = {
-			"args": [],
-			"canvasResizePolicy": 2,
-			"executable": "GlitchesBuckshot-W-MPsupport", // Points to the .wasm file
-			"mainPack": "GlitchesBuckshot-W-MPsupport.pck", // Points to the .pck file
-			"fileSizes": {
-				"GlitchesBuckshot-W-MPsupport.pck": 1, // Optional file size tracking variables
-				"GlitchesBuckshot-W-MPsupport.wasm": 1
+		// Helper function to sequentially download and merge split chunks into a single Blob URL
+		async function fetchAndMergeParts(baseName, totalParts, paddingLength) {
+			const chunks = [];
+			for (let i = 1; i <= totalParts; i++) {
+				// Formats number to match filenames (e.g., "01" instead of "1")
+				const partNum = String(i).padStart(paddingLength, '0');
+				const url = `${baseName}.part${partNum}`;
+				
+				document.getElementById('status-text').textContent = `Fetching: ${url}`;
+				const response = await fetch(url);
+				if (!response.ok) throw new Error(`Failed to download ${url}`);
+				
+				const blob = await response.blob();
+				chunks.push(blob);
+				
+				// Global progress tracker update
+				window.totalDownloadedParts++;
+				const percent = Math.floor((window.totalDownloadedParts / 39) * 100);
+				document.getElementById('progress-fill').style.width = `${percent}%`;
 			}
-		};
+			return URL.createObjectURL(new Blob(chunks, { type: "application/octet-stream" }));
+		}
 
-		const engine = new Engine(GODOT_CONFIG);
+		async function initGame() {
+			window.totalDownloadedParts = 0;
+			try {
+				// 1. Download and reconstruct the split PCK (37 parts)
+				const mergedPckUrl = await fetchAndMergeParts('GlitchesBuckshot-W-MPsupport.pck', 37, 2);
+				
+				// 2. Download and reconstruct the split WASM (2 parts)
+				const mergedWasmUrl = await fetchAndMergeParts('GlitchesBuckshot-W-MPsupport.wasm', 2, 1);
 
-		(function () {
-			const statusEl = document.getElementById('status');
-			
-			engine.startGame({
-				'onProgress': function (current, total) {
-					if (total > 0) {
-						statusEl.textContent = `Loading: ${Math.floor((current / total) * 100)}%`;
-					} else {
-						statusEl.textContent = "Loading...";
-					}
-				}
-			}).then(() => {
-				statusEl.style.display = 'none';
-			}).catch((err) => {
-				statusEl.textContent = "An error occurred loading the engine.";
-				console.error(err);
-			});
-		})();
+				document.getElementById('status-text').textContent = "Initializing Game Engine...";
+
+				// 3. Configure Godot to pull from our browser-assembled memory URLs
+				const GODOT_CONFIG = {
+					"args": [],
+					"canvasResizePolicy": 2,
+					"executable": mergedWasmUrl, 
+					"mainPack": mergedPckUrl,
+					"fileSizes": {}
+				};
+
+				const engine = new Engine(GODOT_CONFIG);
+				await engine.startGame();
+				document.getElementById('status').style.display = 'none';
+
+			} catch (error) {
+				document.getElementById('status-text').textContent = "Failed to load split assets.";
+				console.error(error);
+			}
+		}
+
+		// Fire loader once the window is active
+		window.addEventListener('load', initGame);
 	</script>
 </body>
 </html>

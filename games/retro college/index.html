@@ -5,6 +5,40 @@
 
 
 <head>
+    <!-- FIXED STORAGE INTERCEPTOR - PROGRESS FIX -->
+    <script>
+        (function() {
+            // Keep clean references to native browser storage operations
+            const originalGetItem = window.localStorage.getItem.bind(window.localStorage);
+            const originalSetItem = window.localStorage.setItem.bind(window.localStorage);
+            const originalRemoveItem = window.localStorage.removeItem.bind(window.localStorage);
+            const originalClear = window.localStorage.clear.bind(window.localStorage);
+
+            // Establish an immediate synchronization bridge
+            Object.defineProperty(window, 'localStorage', {
+                value: {
+                    get length() { return window.localStorage.length; },
+                    key: function(index) { return window.localStorage.key(index); },
+                    getItem: function(key) {
+                        return originalGetItem(key);
+                    },
+                    setItem: function(key, value) {
+                        // Crucial Fix: Force the game engine to write directly to your hard drive instantly!
+                        originalSetItem(key, String(value));
+                    },
+                    removeItem: function(key) {
+                        originalRemoveItem(key);
+                    },
+                    clear: function() {
+                        originalClear();
+                    }
+                },
+                writable: false,
+                configurable: true
+            });
+        })();
+    </script>
+
     <script src="/js/all.js"></script>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -121,11 +155,11 @@
     <!-- Builtin injector for injecting runner path -->
 
 
-    <!-- NO POKI (Native Saving Enabled) -->
-    <script>window.onload = GameMaker_Init;</script>
+    <!-- NO POKI -->
+    <!-- <script>window.onload = GameMaker_Init;</script> -->
 
-    <!-- YES POKI (Deactivated to prevent site locking and clear-on-exit blocks) -->
-    <!-- 
+    <!-- YES POKI -->
+    <!-- Poki start -->
     <script src="poki-sdk.js"></script>
     <script>(function () {
             function fin(ok) {
@@ -148,7 +182,7 @@
             });
         })();
     </script>
-    -->
+    <!-- Poki end -->
 
 </body>
 

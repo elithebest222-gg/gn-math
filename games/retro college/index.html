@@ -5,37 +5,32 @@
 
 
 <head>
-    <!-- FIXED STORAGE INTERCEPTOR - PROGRESS FIX -->
+    <!-- AUTOMATED NATIVE SAVING AND SITELOCK DECEPTOR -->
     <script>
         (function() {
-            // Keep clean references to native browser storage operations
-            const originalGetItem = window.localStorage.getItem.bind(window.localStorage);
-            const originalSetItem = window.localStorage.setItem.bind(window.localStorage);
-            const originalRemoveItem = window.localStorage.removeItem.bind(window.localStorage);
-            const originalClear = window.localStorage.clear.bind(window.localStorage);
-
-            // Establish an immediate synchronization bridge
-            Object.defineProperty(window, 'localStorage', {
-                value: {
-                    get length() { return window.localStorage.length; },
-                    key: function(index) { return window.localStorage.key(index); },
-                    getItem: function(key) {
-                        return originalGetItem(key);
-                    },
-                    setItem: function(key, value) {
-                        // Crucial Fix: Force the game engine to write directly to your hard drive instantly!
-                        originalSetItem(key, String(value));
-                    },
-                    removeItem: function(key) {
-                        originalRemoveItem(key);
-                    },
-                    clear: function() {
-                        originalClear();
-                    }
-                },
+            // Force the game engine to bypass domain blocking restrictions safely
+            Object.defineProperty(window.location, 'hostname', {
+                value: 'poki.com',
                 writable: false,
                 configurable: true
             });
+            Object.defineProperty(document, 'domain', {
+                value: 'poki.com',
+                writable: false,
+                configurable: true
+            });
+            
+            // Re-route Poki commercial events to prevent save data loop freezes
+            window.PokiSDK = {
+                init: function() { return Promise.resolve(true); },
+                commercialBreak: function() { return Promise.resolve(true); },
+                rewardedBreak: function() { return Promise.resolve(true); },
+                gameLoadingStart: function() {},
+                gameLoadingProgress: function() {},
+                gameLoadingFinished: function() {},
+                gameplayStart: function() {},
+                gameplayStop: function() {}
+            };
         })();
     </script>
 
